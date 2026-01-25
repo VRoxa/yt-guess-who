@@ -1,0 +1,25 @@
+
+:root {
+  --backgorund-dark: rgb(48, 41, 41);
+  --backgorund-darker: rgb(26, 21, 21);
+  --contrast: rgb(221, 221, 221);
+
+  --accent-300: rgb(141, 30, 30);
+  --accent-500: rgb(210, 49, 49);
+  --accent-700: rgb(206, 88, 88);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+
+  background: linear-gradient(
+    to right,
+    var(--backgorund-darker) 0%,
+    var(--backgorund-dark) 20%,
+    var(--backgorund-dark) 80%,
+    var(--backgorund-darker) 100%,
+  );
+
+  color: var(--contrast);
+}
