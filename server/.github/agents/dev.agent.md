@@ -118,6 +118,18 @@ All tests go in `tests/YtGuessWho.Tests/`. Mirror the source namespace under a m
 | `Application` | Every use-case/service method: happy path and all error paths, using mocked repositories and domain fakes |
 | `Infrastructure` | Not tested directly — use fakes/mocks in Application tests instead |
 
+### Infrastructure-only tickets — accepted exception
+When a ticket introduces code **exclusively in the `Infrastructure` layer** (Hub lifecycle wiring,
+payload records, DI module changes) and no new `Domain` or `Application` types are added, there is
+nothing for `YtGuessWho.Tests` to reference without violating the dependency matrix. In this case:
+
+- **No unit tests are written.** State this explicitly in the Delivery Checklist with the reason.
+- **The ticket's manual Test Plan is the sole automated-test substitute.** The human tester executes it after `dotnet run`.
+- **Do not create an integration test project** to work around this — that decision is reserved for the human.
+
+This exception was established in ticket-002. It does not apply to any ticket that also introduces
+`Domain` or `Application` types — those must always have unit tests.
+
 ### Test naming convention
 Use the pattern: `[MethodUnderTest]_[Scenario]_[ExpectedOutcome]`
 
@@ -158,5 +170,6 @@ Before ending your turn, confirm all the following:
 - [ ] Business invariants are enforced inside Domain aggregates, not services
 - [ ] All public types follow the ubiquitous language from `docs/context.md`
 - [ ] Unit tests are written for all Domain and Application code introduced
+      *(if the ticket touches only Infrastructure, state "No unit tests — Infrastructure-only exception, covered by manual Test Plan" and stop)*
 - [ ] Test names follow the `[Method]_[Scenario]_[Outcome]` convention
 - [ ] `get_errors` was run and returned zero errors
