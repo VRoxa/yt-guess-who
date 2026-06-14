@@ -44,14 +44,20 @@ builder.Host.UseSerilog((_, _, cfg) =>
 
 builder.Services.AddHealthChecks();
 
-// CORS: allow any origin during early development.
-// A restricted origin whitelist (read from appsettings.json) will replace this
-// in a later ticket per docs/realtime-communication.md#cors.
+// CORS: origins are read from Cors:AllowedOrigins in appsettings.json.
+// AllowCredentials() is required because SignalR's negotiate request sets
+// credentials mode to 'include'; a wildcard origin ('*') is rejected by the
+// browser in that case. See docs/realtime-communication.md#cors.
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? [];
+
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin()
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
-              .AllowAnyHeader()));
+              .AllowAnyHeader()
+              .AllowCredentials()));
 
 builder.Services.AddSignalR();
 
@@ -65,5 +71,3 @@ app.MapHealthChecks("/health");
 app.MapHub<GameHub>("/hubs/game");
 
 app.Run();
-
-

@@ -1,6 +1,0 @@
-@YtGuessWho.Application_HostAddress = http://localhost:5030
-
-GET {{YtGuessWho.Application_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

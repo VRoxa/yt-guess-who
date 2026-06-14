@@ -1,6 +1,17 @@
 🚧
 
-This space is intentionally left blank. Just like my motivation on Mondays.  
-Plus, documentation is like a joke. If you have to explain it, it's not that good...
+### Launch server API locally
 
-(Anyway, I'll explain it later.)
+```bash
+dotnet run --project server/src/YtGuessWho.Api/YtGuessWho.Api.csproj --launch-profile "https"
+```
+
+```bash
+dotnet watch --project server/src/YtGuessWho.Api/YtGuessWho.Api.csproj --launch-profile "https"
+```
+
+### Serve client application locally
+
+```bash
+cd client && pnpm start
+```

@@ -1,4 +1,6 @@
 using Autofac;
+using Microsoft.Extensions.Hosting;
+using YtGuessWho.Application.Services.Implementations;
 
 namespace YtGuessWho.Application.DependencyInjection;
 
@@ -10,9 +12,10 @@ public sealed class ApplicationModule : Module
 {
     protected override void Load(ContainerBuilder builder)
     {
-        // Application services will be registered here as they are introduced.
-        // Example:
-        //   builder.RegisterType<JamService>().As<IJamService>().InstancePerLifetimeScope();
+        builder
+            .RegisterType<AppBootstrapper>()
+            .As<IHostedService>()
+            .SingleInstance();
     }
 }
 
