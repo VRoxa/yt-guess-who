@@ -1,25 +1,465 @@
+// ============================================================
+// YtGuessWho — Global Design System
+// Single source of truth for all design tokens and reusable
+// component styles. Component SCSS files handle layout only.
+// Spec: docs/design/look-and-feel.md
+//       docs/design/color-palette.md
+//       docs/design/component-style-guide.md
+// ============================================================
+
+// ── Design Tokens ────────────────────────────────────────────
 
 :root {
-  --backgorund-dark: rgb(48, 41, 41);
-  --backgorund-darker: rgb(26, 21, 21);
-  --contrast: rgb(221, 221, 221);
+  // ── MD3 Color Roles — Dark Scheme ──────────────────────────
+  --md-primary:                #D0BCFF;
+  --md-on-primary:             #381E72;
+  --md-primary-container:      #4F378B;
+  --md-on-primary-container:   #EADDFF;
 
-  --accent-300: rgb(141, 30, 30);
-  --accent-500: rgb(210, 49, 49);
-  --accent-700: rgb(206, 88, 88);
+  --md-secondary:              #CCC2DC;
+  --md-on-secondary:           #332D41;
+  --md-secondary-container:    #4A4458;
+  --md-on-secondary-container: #E8DEF8;
+
+  --md-error:                  #FFB4AB;
+  --md-on-error:               #690005;
+  --md-error-container:        #93000A;
+  --md-on-error-container:     #FFDAD6;
+
+  --md-surface:                #1C1B1F;
+  --md-on-surface:             #E6E1E5;
+  --md-surface-variant:        #49454F;
+  --md-on-surface-variant:     #CAC4D0;
+  --md-outline:                #938F99;
+
+  --md-background:             #1C1B1F;
+  --md-on-background:          #E6E1E5;
+
+  // ── Semantic Color Aliases ──────────────────────────────────
+  --color-action-primary:       var(--md-primary);
+  --color-action-primary-text:  var(--md-on-primary);
+  --color-action-secondary-text: var(--md-primary);
+
+  --color-danger:               var(--md-error);
+  --color-danger-surface:       var(--md-error-container);
+  --color-danger-text:          var(--md-on-error-container);
+
+  --color-input-bg:             var(--md-surface-variant);
+  --color-input-border:         var(--md-outline);
+  --color-input-border-focus:   var(--md-primary);
+  --color-input-border-error:   var(--md-error);
+  --color-input-placeholder:    var(--md-on-surface-variant);
+
+  --color-jam-code-text:        var(--md-on-primary-container);
+  --color-jam-code-bg:          var(--md-primary-container);
+
+  // ── Elevation (box-shadow values) ──────────────────────────
+  --elevation-0: none;
+  --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.6);
+  --elevation-2: 0 4px 8px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.4);
+  --elevation-3: 0 8px 24px rgba(0, 0, 0, 0.6), 0 4px 8px rgba(0, 0, 0, 0.5);
+
+  // ── Spacing Scale (base unit = 4px) ────────────────────────
+  --space-1:  0.25rem;   //  4px
+  --space-2:  0.5rem;    //  8px
+  --space-3:  0.75rem;   // 12px
+  --space-4:  1rem;      // 16px
+  --space-6:  1.5rem;    // 24px
+  --space-8:  2rem;      // 32px
+  --space-12: 3rem;      // 48px
+  --space-16: 4rem;      // 64px
+
+  // ── Animation Tokens ───────────────────────────────────────
+  --duration-instant:  80ms;
+  --duration-fast:     150ms;
+  --duration-standard: 250ms;
+  --duration-slow:     400ms;
+
+  --ease-standard:   cubic-bezier(0.2, 0, 0, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0, 1);
+  --ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
 }
 
-html, body {
+
+// ── Reset ─────────────────────────────────────────────────────
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
 
-  background: linear-gradient(
-    to right,
-    var(--backgorund-darker) 0%,
-    var(--backgorund-dark) 20%,
-    var(--backgorund-dark) 80%,
-    var(--backgorund-darker) 100%,
-  );
 
-  color: var(--contrast);
+// ── Base ──────────────────────────────────────────────────────
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 1rem;
+  line-height: 1.6;
+  background-color: var(--md-background);
+  color: var(--md-on-background);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// Make the Angular root element a full-height flex container
+// so child components can use flex: 1 to fill the viewport.
+app-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+
+// ── Typography ────────────────────────────────────────────────
+
+h1, .type-heading-1 {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 3rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--md-on-background);
+}
+
+h2, .type-heading-2 {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 2rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--md-on-background);
+}
+
+h3, .type-heading-3 {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: var(--md-on-background);
+}
+
+p {
+  line-height: 1.6;
+}
+
+
+// ── Buttons ───────────────────────────────────────────────────
+// Base styles shared by all button variants.
+// Apply .btn plus exactly one variant modifier class.
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  padding: 0 var(--space-6);
+  border: none;
+  border-radius: 24px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--duration-instant) var(--ease-standard),
+    border-color     var(--duration-instant) var(--ease-standard),
+    color            var(--duration-instant) var(--ease-standard),
+    box-shadow       var(--duration-instant) var(--ease-standard);
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  // Disabled state — applies to all variants unless overridden.
+  &:disabled {
+    background-color: color-mix(in srgb, var(--md-on-surface) 12%, transparent);
+    color: color-mix(in srgb, var(--md-on-surface) 38%, transparent);
+    border-color: transparent;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+}
+
+// Variant: Primary
+// Used for the main call-to-action (e.g. Create Jam).
+.btn--primary {
+  background-color: var(--color-action-primary);
+  color: var(--color-action-primary-text);
+
+  &:hover:not(:disabled) {
+    // MD3 state layer: 8% white overlay + elevation-1
+    box-shadow:
+      inset 0 0 0 9999px rgba(255, 255, 255, 0.08),
+      var(--elevation-1);
+  }
+
+  &:active:not(:disabled) {
+    // MD3 state layer: 12% white overlay
+    box-shadow: inset 0 0 0 9999px rgba(255, 255, 255, 0.12);
+  }
+
+  &:focus-visible:not(:disabled) {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--md-primary) 50%, transparent);
+  }
+}
+
+// Variant: Secondary (Outlined)
+// Used for secondary actions alongside a primary button (e.g. Join Jam).
+.btn--secondary {
+  background-color: transparent;
+  color: var(--color-action-secondary-text);
+  border: 1.5px solid var(--color-input-border);
+
+  &:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--md-primary) 8%, transparent);
+    border-color: var(--md-primary);
+  }
+
+  &:active:not(:disabled) {
+    background-color: color-mix(in srgb, var(--md-primary) 12%, transparent);
+    border-color: var(--md-primary);
+  }
+
+  &:focus-visible:not(:disabled) {
+    border-color: var(--md-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--md-primary) 50%, transparent);
+  }
+
+  // Override base disabled — secondary keeps a faint visible border.
+  &:disabled {
+    background-color: transparent;
+    border: 1.5px solid color-mix(in srgb, var(--md-on-surface) 12%, transparent);
+  }
+}
+
+// Variant: Ghost (Text-only)
+// Used for low-emphasis tertiary actions.
+.btn--ghost {
+  background-color: transparent;
+  color: var(--md-primary);
+  border: none;
+
+  &:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--md-primary) 8%, transparent);
+  }
+
+  &:active:not(:disabled) {
+    background-color: color-mix(in srgb, var(--md-primary) 12%, transparent);
+  }
+
+  &:focus-visible:not(:disabled) {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--md-primary) 50%, transparent);
+  }
+
+  &:disabled {
+    background-color: transparent;
+    border: none;
+  }
+}
+
+// Variant: Danger
+// Used for destructive actions only.
+.btn--danger {
+  background-color: var(--md-error-container);
+  color: var(--md-on-error-container);
+  border: none;
+
+  &:hover:not(:disabled) {
+    box-shadow: inset 0 0 0 9999px rgba(255, 255, 255, 0.08);
+  }
+
+  &:active:not(:disabled) {
+    box-shadow: inset 0 0 0 9999px rgba(255, 255, 255, 0.12);
+  }
+
+  &:focus-visible:not(:disabled) {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--md-error) 50%, transparent);
+  }
+}
+
+
+// ── Form Elements ─────────────────────────────────────────────
+
+// Global label — always sits above its associated input.
+label {
+  display: block;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  color: var(--md-on-surface-variant);
+  margin-bottom: var(--space-2); // 8px gap between label and input
+}
+
+// Global text-like inputs
+input[type='text'],
+input[type='url'],
+input[type='email'],
+input[type='password'] {
+  display: block;
+  width: 100%;
+  height: 56px;
+  padding: 0 var(--space-4);
+  background-color: var(--color-input-bg);
+  color: var(--md-on-surface);
+  border: 1.5px solid var(--color-input-border);
+  border-radius: 12px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 1rem;
+  line-height: 1.6;
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow   var(--duration-fast) var(--ease-standard);
+
+  &::placeholder {
+    color: color-mix(in srgb, var(--color-input-placeholder) 60%, transparent);
+    font-style: normal;
+  }
+
+  &:hover:not(:disabled):not(:focus) {
+    border-color: var(--md-on-surface-variant);
+  }
+
+  &:focus {
+    border-width: 2px;
+    border-color: var(--color-input-border-focus);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--md-primary) 25%, transparent);
+  }
+
+  &:disabled {
+    background-color: var(--md-surface);
+    color: color-mix(in srgb, var(--md-on-surface) 38%, transparent);
+    border-color: color-mix(in srgb, var(--md-outline) 38%, transparent);
+    cursor: not-allowed;
+  }
+
+  // Error state — add class .input--error or parent .form-field--error
+  &.input--error,
+  .form-field--error & {
+    border-width: 2px;
+    border-color: var(--color-input-border-error);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--md-error) 20%, transparent);
+  }
+}
+
+// Form field wrapper — groups a label + input with correct internal spacing.
+// Use <div class="form-field"> around every label/input pair.
+.form-field {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  // The global label rule provides the 8px gap via margin-bottom.
+}
+
+// Form-level inline error message — appears below the button row.
+.form-error {
+  display: block;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--color-danger);
+  animation: fade-in var(--duration-fast) var(--ease-standard) both;
+}
+
+
+// ── Cards ─────────────────────────────────────────────────────
+
+.card {
+  padding: var(--space-6);
+  border-radius: 16px;
+  background-color: var(--md-surface);
+  box-shadow: var(--elevation-1);
+}
+
+
+// ── Badges / Status Chips ─────────────────────────────────────
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 9999px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+
+  &.badge--neutral {
+    background-color: var(--md-surface-variant);
+    color: var(--md-on-surface-variant);
+  }
+
+  &.badge--success {
+    background-color: #1B5E20;
+    color: #A5D6A7;
+  }
+
+  &.badge--warning {
+    background-color: #E65100;
+    color: #FFE0B2;
+  }
+
+  &.badge--error {
+    background-color: var(--md-error-container);
+    color: var(--md-on-error-container);
+  }
+}
+
+
+// ── Keyframe Animations ───────────────────────────────────────
+
+// Used by .form-error (fade in when error appears)
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+// Used by the Jam code display container on first render
+@keyframes jam-code-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+
+// ── Reduced Motion ────────────────────────────────────────────
+// Honour the OS-level "reduce motion" preference by collapsing
+// all transition and animation durations to near-zero.
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

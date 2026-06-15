@@ -1,87 +1,117 @@
+// Layout-only styles for LobbyComponent.
+// All colors, typography, and component base styles are provided by the global
+// design system in styles.scss. This file handles only structural positioning.
+
+// ── Host — page-level centering ───────────────────────────────
+
 :host {
-  display: block;
-  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 100vh;
+  padding: var(--space-16) var(--space-6); // 64px top/bottom, 24px inline
 }
+
+
+// ── Lobby Form ────────────────────────────────────────────────
 
 .lobby-form {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  max-width: 28rem;
-  margin: 0 auto;
+  align-items: stretch;
+  width: 100%;
+  max-width: 560px;
 
-  h2 {
-    margin: 0 0 0.5rem;
-    font-size: 1.5rem;
+  // 24px vertical gap between consecutive form fields
+  .form-field + .form-field {
+    margin-top: var(--space-6);
   }
 
-  label {
-    align-self: flex-start;
-    font-weight: 500;
-  }
+  // 32px gap from the last field to the button row
+  .button-row {
+    display: flex;
+    gap: var(--space-3); // 12px between buttons
+    margin-top: var(--space-8);
 
-  input {
-    width: 100%;
-    padding: 0.5rem 0.75rem;
-    font-size: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
-  }
+    // Each button fills equal width
+    .btn {
+      flex: 1;
+    }
 
-  button {
-    padding: 0.6rem 1.5rem;
-    font-size: 1rem;
-    cursor: pointer;
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+    // Stack vertically on very narrow viewports
+    @media (max-width: 400px) {
+      flex-direction: column;
     }
   }
 
-  .button-row {
-    display: flex;
-    gap: 0.75rem;
-    width: 100%;
-  }
-
-  .error {
-    color: #c0392b;
-    margin: 0;
-    font-size: 0.9rem;
+  // 16px gap from the button row to the error message
+  .form-error {
+    margin-top: var(--space-4);
   }
 }
 
+
+// ── Jam Created — success state ───────────────────────────────
+
+// Outer wrapper — fills available space and centres the hero container.
 .jam-created {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  margin: 4rem auto;
-  text-align: center;
-
-  .jam-label {
-    margin: 0;
-    font-size: 1rem;
-    color: #666;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  .jam-code {
-    margin: 0;
-    font-size: 5rem;
-    font-weight: 700;
-    letter-spacing: 0.25em;
-    line-height: 1;
-  }
-
-  .jam-hint {
-    margin: 0;
-    font-size: 0.95rem;
-    color: #555;
-  }
+  justify-content: center;
+  flex: 1;
+  width: 100%;
 }
 
+// Hero container — the styled card with glow that shows the Jam code.
+.jam-created__container {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3); // 12px between label / code / hint
+  padding: var(--space-8) var(--space-12); // 32px 48px
+  background-color: var(--color-jam-code-bg);
+  border: 2px solid color-mix(in srgb, var(--md-primary) 40%, transparent);
+  border-radius: 20px;
+  // Elevation 2 + branded outer glow (MD3 deviation — see design/component-style-guide.md §7)
+  box-shadow:
+    var(--elevation-2),
+    0 0 40px color-mix(in srgb, var(--md-primary) 20%, transparent);
+  // Mandatory entrance animation per design/look-and-feel.md — Motion & Animation
+  animation: jam-code-enter var(--duration-standard) var(--ease-decelerate) both;
+}
+
+// Small uppercase label above the code
+.jam-label {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--md-on-primary-container) 70%, transparent);
+}
+
+// The six-character Jam code — hero typography
+.jam-code {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 5rem; // 80px — jam-code type role
+  line-height: 1;
+  letter-spacing: 0.25em;
+  color: var(--color-jam-code-text);
+  text-rendering: optimizeLegibility;
+}
+
+// Sharing hint below the code
+.jam-hint {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--md-on-primary-container) 60%, transparent);
+  max-width: 280px;
+  text-align: center;
+}

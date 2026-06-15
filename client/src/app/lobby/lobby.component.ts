@@ -19,27 +19,32 @@ import { HubConnectionService } from '../core/hub-connection.service';
   template: `
     @if (jamCode() === null) {
       <div class="lobby-form">
-        <label for="display-name">Your display name</label>
-        <input
-          id="display-name"
-          type="text"
-          placeholder="Enter your name"
-          [value]="displayName()"
-          (input)="displayName.set($any($event.target).value)"
-        />
+        <div class="form-field">
+          <label for="display-name">Your display name</label>
+          <input
+            id="display-name"
+            type="text"
+            placeholder="Enter your name"
+            [value]="displayName()"
+            (input)="displayName.set($any($event.target).value)"
+          />
+        </div>
 
-        <label for="jam-code">Jam code</label>
-        <input
-          id="jam-code"
-          type="text"
-          placeholder="Enter a Jam code to join"
-          [value]="enteredJamCode()"
-          (input)="enteredJamCode.set($any($event.target).value)"
-        />
+        <div class="form-field">
+          <label for="jam-code">Jam code</label>
+          <input
+            id="jam-code"
+            type="text"
+            placeholder="Enter a Jam code to join"
+            [value]="enteredJamCode()"
+            (input)="enteredJamCode.set($any($event.target).value)"
+          />
+        </div>
 
         <div class="button-row">
           <button
             type="button"
+            class="btn btn--primary"
             [disabled]="!displayName().trim() || isCreating() || isJoining() || hubService.isTransitioning()"
             (click)="onCreateJam()"
           >
@@ -48,6 +53,7 @@ import { HubConnectionService } from '../core/hub-connection.service';
 
           <button
             type="button"
+            class="btn btn--secondary"
             [disabled]="!displayName().trim() || !enteredJamCode().trim() || isJoining() || isCreating() || hubService.isTransitioning()"
             (click)="onJoinJam()"
           >
@@ -56,14 +62,16 @@ import { HubConnectionService } from '../core/hub-connection.service';
         </div>
 
         @if (errorMessage() !== undefined || hubService.errorMessage() !== undefined) {
-          <p class="error">{{ errorMessage() ?? hubService.errorMessage() }}</p>
+          <p class="form-error">{{ errorMessage() ?? hubService.errorMessage() }}</p>
         }
       </div>
     } @else {
       <div class="jam-created">
-        <p class="jam-label">Your Jam code</p>
-        <p class="jam-code">{{ jamCode() }}</p>
-        <p class="jam-hint">Share this code with your friends so they can join.</p>
+        <div class="jam-created__container">
+          <p class="jam-label">Your Jam code</p>
+          <p class="jam-code">{{ jamCode() }}</p>
+          <p class="jam-hint">Share this code with your friends so they can join.</p>
+        </div>
       </div>
     }
   `,
