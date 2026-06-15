@@ -61,10 +61,15 @@ public sealed class GameHub : Hub<IGameHubClient>
 
             await Groups.AddToGroupAsync(Context.ConnectionId, jamCode, Context.ConnectionAborted);
 
-            await Clients.Group(jamCode).PlayerJoined(new PlayerJoinedPayload(
-                Context.ConnectionId,
-                displayName,
-                IsHost: true));
+            var players = await _jamService.GetPlayers(jamCode, Context.ConnectionAborted);
+
+            foreach (var player in players)
+            {
+                await Clients.Caller.PlayerJoined(new PlayerJoinedPayload(
+                    player.PlayerId,
+                    player.DisplayName,
+                    player.IsHost));
+            }
 
             _logger.LogInformation(
                 "Jam {JamCode} created by connection {ConnectionId}",
@@ -111,6 +116,24 @@ public sealed class GameHub : Hub<IGameHubClient>
 
             await Groups.AddToGroupAsync(Context.ConnectionId, jamCode, Context.ConnectionAborted);
 
+            var players = await _jamService.GetPlayers(jamCode, Context.ConnectionAborted);
+
+            foreach (var player in players)
+            {
+                await Clients.Caller.PlayerJoined(new PlayerJoinedPayload(
+                    player.PlayerId,
+                    player.DisplayName,
+                    player.IsHost));
+            }
+
+            // Broadcast only the new player to existing members so they don't receive a duplicate.
+            var joiner = players.First(p => p.PlayerId == Context.ConnectionId);
+
+            await Clients.GroupExcept(jamCode, [Context.ConnectionId]).PlayerJoined(new PlayerJoinedPayload(
+                joiner.PlayerId,
+                joiner.DisplayName,
+                joiner.IsHost));
+
             _logger.LogInformation(
                 "Player joined Jam {JamCode}. ConnectionId: {ConnectionId}",
                 jamCode,
@@ -148,6 +171,58 @@ public sealed class GameHub : Hub<IGameHubClient>
         }
     }
 
+    /// <summary>
+    /// Removes the calling Player from their current Jam, notifies remaining group members,
+    /// and resets the caller's group membership.
+    /// </summary>
+    /// <remarks>
+    /// On success: the caller is removed from the SignalR group, a <c>PlayerLeft</c> event is
+    /// broadcast to remaining members, and a <c>HostChanged</c> event is broadcast if the
+    /// departing Player was the Host.
+    /// On <c>NOT_IN_JAM</c>: an <c>Error</c> event is sent exclusively to the caller and a
+    /// <see cref="HubException"/> is thrown so the client's <c>invoke()</c> Promise rejects.
+    /// </remarks>
+    /// <exception cref="HubException">
+    /// Thrown (after sending <c>Error</c> to the caller) when the caller is not in any active Jam.
+    /// </exception>
+    public async Task LeaveJam()
+    {
+        try
+        {
+            var result = await _jamService.LeaveJam(
+                new LeaveJamCommand(Context.ConnectionId),
+                Context.ConnectionAborted);
+
+            // Remove the caller from the group BEFORE broadcasting so they do not receive
+            // the PlayerLeft event for themselves.
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, result.JamCode, Context.ConnectionAborted);
+
+            if (!result.JamIsEmpty)
+            {
+                await Clients.Group(result.JamCode).PlayerLeft(new PlayerLeftPayload(Context.ConnectionId));
+
+                if (result.NewHostPlayerId is not null)
+                {
+                    await Clients.Group(result.JamCode).HostChanged(new HostChangedPayload(result.NewHostPlayerId));
+                }
+            }
+
+            _logger.LogInformation(
+                "Player left Jam {JamCode}. ConnectionId: {ConnectionId}",
+                result.JamCode,
+                Context.ConnectionId);
+        }
+        catch (NotInJamException)
+        {
+            _logger.LogWarning(
+                "NOT_IN_JAM: connection {ConnectionId} attempted to leave a Jam while not in one.",
+                Context.ConnectionId);
+
+            await Clients.Caller.Error(new ErrorPayload("NOT_IN_JAM", "You are not currently in a Jam."));
+            throw new HubException("NOT_IN_JAM");
+        }
+    }
+
     /// <inheritdoc />
     /// <remarks>
     /// A raw WebSocket connection has been established. No game state is created or mutated here.
@@ -165,9 +240,12 @@ public sealed class GameHub : Hub<IGameHubClient>
 
     /// <inheritdoc />
     /// <remarks>
-    /// Triggered on both graceful and abrupt disconnects. Full Jam cleanup (removing the Player,
-    /// broadcasting <c>PlayerLeft</c>, handling Host disconnection) is deferred until the
-    /// Application layer services are available in a subsequent ticket.
+    /// Triggered on both graceful and abrupt disconnects. Removes the Player from their active
+    /// Jam (if any) and broadcasts <c>PlayerLeft</c> and, where applicable, <c>HostChanged</c>
+    /// to remaining group members. SignalR automatically removes the connection from all groups
+    /// on disconnect — <c>Groups.RemoveFromGroupAsync</c> is deliberately not called here.
+    /// If the Player was not in any Jam, the <see cref="NotInJamException"/> is silently
+    /// swallowed (this is a normal path for connections that never joined a Jam).
     /// </remarks>
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
@@ -176,15 +254,42 @@ public sealed class GameHub : Hub<IGameHubClient>
             _logger.LogInformation(
                 "Player disconnected gracefully. ConnectionId: {ConnectionId}",
                 Context.ConnectionId);
-
-            await base.OnDisconnectedAsync(exception);
-            return;
+        }
+        else
+        {
+            _logger.LogWarning(
+                exception,
+                "Player disconnected abruptly. ConnectionId: {ConnectionId}",
+                Context.ConnectionId);
         }
 
-        _logger.LogWarning(
-            exception,
-            "Player disconnected abruptly. ConnectionId: {ConnectionId}",
-            Context.ConnectionId);
+        try
+        {
+            // No CancellationToken — the connection is already closing.
+            var result = await _jamService.LeaveJam(new LeaveJamCommand(Context.ConnectionId));
+
+            if (!result.JamIsEmpty)
+            {
+                await Clients.Group(result.JamCode).PlayerLeft(new PlayerLeftPayload(Context.ConnectionId));
+
+                if (result.NewHostPlayerId is not null)
+                {
+                    await Clients.Group(result.JamCode).HostChanged(new HostChangedPayload(result.NewHostPlayerId));
+                }
+            }
+
+            _logger.LogInformation(
+                "Disconnect cleanup complete. JamCode: {JamCode}, ConnectionId: {ConnectionId}",
+                result.JamCode,
+                Context.ConnectionId);
+        }
+        catch (NotInJamException)
+        {
+            // Normal path — the connection closed before the player joined any Jam.
+            _logger.LogDebug(
+                "Disconnected player {ConnectionId} was not in any Jam — no cleanup required.",
+                Context.ConnectionId);
+        }
 
         await base.OnDisconnectedAsync(exception);
     }

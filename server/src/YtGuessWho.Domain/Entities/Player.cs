@@ -22,7 +22,7 @@ public sealed class Player
     /// Whether this Player is the Host of the Jam — i.e. the Player who created it.
     /// Only one Player per Jam may have <c>IsHost = true</c>.
     /// </summary>
-    public bool IsHost { get; }
+    public bool IsHost { get; private set; }
 
     /// <summary>
     /// The cumulative Score accumulated by this Player across all completed Rounds.
@@ -55,5 +55,12 @@ public sealed class Player
         DisplayName = displayName;
         IsHost = isHost;
     }
+
+    /// <summary>
+    /// Promotes this Player to Host status.
+    /// Called exclusively by <see cref="YtGuessWho.Domain.Aggregates.Jam.RemovePlayer"/>
+    /// when the departing Player held the Host role and at least one Player remains.
+    /// </summary>
+    internal void PromoteToHost() => IsHost = true;
 }
 

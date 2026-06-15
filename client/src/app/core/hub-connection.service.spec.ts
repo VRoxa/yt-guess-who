@@ -8,6 +8,7 @@ type MockConnection = {
   start: ReturnType<typeof vi.fn>;
   stop: ReturnType<typeof vi.fn>;
   onclose: ReturnType<typeof vi.fn>;
+  on: ReturnType<typeof vi.fn>;
   invoke: ReturnType<typeof vi.fn>;
 };
 
@@ -21,6 +22,7 @@ describe('HubConnectionService', () => {
       start: vi.fn().mockResolvedValue(undefined),
       stop: vi.fn().mockResolvedValue(undefined),
       onclose: vi.fn(),
+      on: vi.fn(),
       invoke: vi.fn().mockResolvedValue('ABCDEF'),
     };
 
@@ -281,6 +283,136 @@ describe('HubConnectionService', () => {
 
       // Act & Assert
       await expect(service.joinJam('ZZZZZZ', 'Bob')).rejects.toThrow('JAM_NOT_FOUND');
+    });
+  });
+
+  describe('onPlayerJoined()', () => {
+    it('registers a handler on the connection using the PlayerJoined event name', () => {
+      // Arrange
+      const handler = vi.fn();
+
+      // Act
+      service.onPlayerJoined(handler);
+
+      // Assert
+      expect(mockConnection.on).toHaveBeenCalledOnce();
+      expect(mockConnection.on).toHaveBeenCalledWith('PlayerJoined', handler);
+    });
+
+    it('invokes the handler with the player payload when the mock fires a PlayerJoined event', () => {
+      // Arrange
+      const handler = vi.fn();
+      service.onPlayerJoined(handler);
+
+      // Retrieve the handler that was registered on the mock connection
+      const registeredHandler = mockConnection.on.mock.calls.find(
+        (call: unknown[]) => call[0] === 'PlayerJoined',
+      )?.[1] as ((player: unknown) => void) | undefined;
+
+      const payload = { playerId: 'conn-1', displayName: 'Alice', isHost: true };
+
+      // Act — simulate the connection firing the event
+      registeredHandler?.(payload);
+
+      // Assert
+      expect(handler).toHaveBeenCalledOnce();
+      expect(handler).toHaveBeenCalledWith(payload);
+    });
+  });
+
+  describe('leaveJam()', () => {
+    it('invokes LeaveJam on the connection with the correct method name', async () => {
+      // Arrange
+      mockConnection.invoke.mockResolvedValue(undefined);
+
+      // Act
+      await service.leaveJam();
+
+      // Assert
+      expect(mockConnection.invoke).toHaveBeenCalledOnce();
+      expect(mockConnection.invoke).toHaveBeenCalledWith('LeaveJam');
+    });
+
+    it('resolves when the connection invoke resolves', async () => {
+      // Arrange
+      mockConnection.invoke.mockResolvedValue(undefined);
+
+      // Act & Assert
+      await expect(service.leaveJam()).resolves.toBeUndefined();
+    });
+
+    it('propagates a rejected promise when the connection invoke rejects', async () => {
+      // Arrange
+      mockConnection.invoke.mockRejectedValue(new Error('NOT_IN_JAM'));
+
+      // Act & Assert
+      await expect(service.leaveJam()).rejects.toThrow('NOT_IN_JAM');
+    });
+  });
+
+  describe('onPlayerLeft()', () => {
+    it('registers a handler on the connection using the PlayerLeft event name', () => {
+      // Arrange
+      const handler = vi.fn();
+
+      // Act
+      service.onPlayerLeft(handler);
+
+      // Assert
+      expect(mockConnection.on).toHaveBeenCalledOnce();
+      expect(mockConnection.on).toHaveBeenCalledWith('PlayerLeft', handler);
+    });
+
+    it('invokes the handler with the payload when the mock fires a PlayerLeft event', () => {
+      // Arrange
+      const handler = vi.fn();
+      service.onPlayerLeft(handler);
+
+      const registeredHandler = mockConnection.on.mock.calls.find(
+        (call: unknown[]) => call[0] === 'PlayerLeft',
+      )?.[1] as ((payload: unknown) => void) | undefined;
+
+      const payload = { playerId: 'conn-1' };
+
+      // Act
+      registeredHandler?.(payload);
+
+      // Assert
+      expect(handler).toHaveBeenCalledOnce();
+      expect(handler).toHaveBeenCalledWith(payload);
+    });
+  });
+
+  describe('onHostChanged()', () => {
+    it('registers a handler on the connection using the HostChanged event name', () => {
+      // Arrange
+      const handler = vi.fn();
+
+      // Act
+      service.onHostChanged(handler);
+
+      // Assert
+      expect(mockConnection.on).toHaveBeenCalledOnce();
+      expect(mockConnection.on).toHaveBeenCalledWith('HostChanged', handler);
+    });
+
+    it('invokes the handler with the payload when the mock fires a HostChanged event', () => {
+      // Arrange
+      const handler = vi.fn();
+      service.onHostChanged(handler);
+
+      const registeredHandler = mockConnection.on.mock.calls.find(
+        (call: unknown[]) => call[0] === 'HostChanged',
+      )?.[1] as ((payload: unknown) => void) | undefined;
+
+      const payload = { newHostPlayerId: 'conn-2' };
+
+      // Act
+      registeredHandler?.(payload);
+
+      // Assert
+      expect(handler).toHaveBeenCalledOnce();
+      expect(handler).toHaveBeenCalledWith(payload);
     });
   });
 });

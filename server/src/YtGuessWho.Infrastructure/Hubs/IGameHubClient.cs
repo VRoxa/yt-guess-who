@@ -25,6 +25,12 @@ public interface IGameHubClient
     Task PlayerLeft(PlayerLeftPayload payload);
 
     /// <summary>
+    /// Broadcast to remaining Jam group members when a new Host is assigned
+    /// because the previous Host left the Jam.
+    /// </summary>
+    Task HostChanged(HostChangedPayload payload);
+
+    /// <summary>
     /// Broadcast to all Jam group members when the Host advances the Jam phase.
     /// </summary>
     Task PhaseChanged(PhaseChangedPayload payload);

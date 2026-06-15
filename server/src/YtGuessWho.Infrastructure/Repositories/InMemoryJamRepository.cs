@@ -51,5 +51,13 @@ internal sealed class InMemoryJamRepository : IJamRepository
 
         return null;
     }
+
+    /// <inheritdoc />
+    public void Remove(string jamCode)
+    {
+        ArgumentNullException.ThrowIfNull(jamCode);
+
+        _jams.TryRemove(jamCode, out _);
+    }
 }
 

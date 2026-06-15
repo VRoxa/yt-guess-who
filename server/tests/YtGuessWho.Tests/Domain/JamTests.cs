@@ -317,5 +317,119 @@ public sealed class JamTests
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("displayName");
     }
+
+    // ── Jam.RemovePlayer ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void RemovePlayer_WhenNonHostPlayerIsRemoved_DecrementsPlayerCount()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+        jam.AddPlayer("bob-conn", "Bob");
+
+        // Act
+        jam.RemovePlayer("bob-conn");
+
+        // Assert
+        jam.Players.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void RemovePlayer_WhenNonHostPlayerIsRemoved_RemainingPlayerRetainsHostStatus()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+        jam.AddPlayer("bob-conn", "Bob");
+
+        // Act
+        jam.RemovePlayer("bob-conn");
+
+        // Assert
+        jam.Players[0].IsHost.Should().BeTrue();
+    }
+
+    [Fact]
+    public void RemovePlayer_WhenNonHostPlayerIsRemoved_RemovedPlayerIsAbsent()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+        jam.AddPlayer("bob-conn", "Bob");
+
+        // Act
+        jam.RemovePlayer("bob-conn");
+
+        // Assert
+        jam.Players.Should().NotContain(p => p.PlayerId == "bob-conn");
+    }
+
+    [Fact]
+    public void RemovePlayer_WhenHostPlayerIsRemovedAndOthersRemain_ExactlyOneRemainingPlayerIsHost()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+        jam.AddPlayer("bob-conn", "Bob");
+        jam.AddPlayer("carol-conn", "Carol");
+
+        // Act
+        jam.RemovePlayer("host-conn");
+
+        // Assert
+        jam.Players.Count(p => p.IsHost).Should().Be(1);
+    }
+
+    [Fact]
+    public void RemovePlayer_WhenHostPlayerIsRemovedAndOthersRemain_HostIsNoLongerInList()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+        jam.AddPlayer("bob-conn", "Bob");
+
+        // Act
+        jam.RemovePlayer("host-conn");
+
+        // Assert
+        jam.Players.Should().NotContain(p => p.PlayerId == "host-conn");
+    }
+
+    [Fact]
+    public void RemovePlayer_WhenLastPlayerIsRemoved_PlayersListIsEmpty()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+
+        // Act
+        jam.RemovePlayer("host-conn");
+
+        // Assert
+        jam.Players.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void RemovePlayer_WhenConnectionIdDoesNotMatch_PlayersListIsUnchanged()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+        jam.AddPlayer("bob-conn", "Bob");
+
+        // Act
+        jam.RemovePlayer("unknown-conn");
+
+        // Assert
+        jam.Players.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void RemovePlayer_WithNullConnectionId_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+
+        // Act
+        var act = () => jam.RemovePlayer(null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("connectionId");
+    }
 }
 

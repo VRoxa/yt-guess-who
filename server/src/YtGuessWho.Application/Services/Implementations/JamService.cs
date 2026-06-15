@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using YtGuessWho.Application.Commands;
+using YtGuessWho.Application.DTOs;
 using YtGuessWho.Application.Exceptions;
 using YtGuessWho.Application.Repositories;
 using YtGuessWho.Domain.Aggregates;
@@ -78,6 +79,70 @@ internal sealed class JamService : IJamService
             command.ConnectionId);
 
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<PlayerSnapshot>> GetPlayers(string jamCode, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(jamCode);
+
+        var jam = _repository.FindByCode(jamCode);
+
+        if (jam is null)
+        {
+            throw new JamNotFoundException(jamCode);
+        }
+
+        IReadOnlyList<PlayerSnapshot> snapshots = jam.Players
+            .Select(p => new PlayerSnapshot(p.PlayerId, p.DisplayName, p.IsHost))
+            .ToList();
+
+        _logger.LogDebug(
+            "GetPlayers called for Jam {JamCode}. PlayerCount: {Count}",
+            jamCode,
+            snapshots.Count);
+
+        return Task.FromResult(snapshots);
+    }
+
+    /// <inheritdoc />
+    public Task<LeaveJamResult> LeaveJam(LeaveJamCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var jam = _repository.FindByPlayerId(command.ConnectionId);
+
+        if (jam is null)
+        {
+            throw new NotInJamException(command.ConnectionId);
+        }
+
+        var previousHostId = jam.Players.FirstOrDefault(p => p.IsHost)?.PlayerId;
+
+        jam.RemovePlayer(command.ConnectionId);
+
+        if (jam.Players.Count == 0)
+        {
+            _repository.Remove(jam.JamCode.Value);
+
+            _logger.LogInformation(
+                "Player left Jam and Jam was disposed. JamCode: {JamCode}, ConnectionId: {ConnectionId}",
+                jam.JamCode.Value,
+                command.ConnectionId);
+
+            return Task.FromResult(new LeaveJamResult(jam.JamCode.Value, true, null));
+        }
+
+        var newHostId = jam.Players.FirstOrDefault(p => p.IsHost)?.PlayerId;
+        var promotedHostId = previousHostId == command.ConnectionId ? newHostId : null;
+
+        _logger.LogInformation(
+            "Player left Jam. JamCode: {JamCode}, ConnectionId: {ConnectionId}, JamIsEmpty: false, NewHostPlayerId: {NewHostPlayerId}",
+            jam.JamCode.Value,
+            command.ConnectionId,
+            promotedHostId ?? "(no change)");
+
+        return Task.FromResult(new LeaveJamResult(jam.JamCode.Value, false, promotedHostId));
     }
 }
 

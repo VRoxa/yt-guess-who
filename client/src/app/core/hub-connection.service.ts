@@ -1,6 +1,9 @@
 import { computed, inject, Injectable, InjectionToken, signal } from '@angular/core';
 import { HubConnectionBuilder, HubConnectionState, type HubConnection } from '@microsoft/signalr';
 
+import type { HostChangedEvent } from './models/host-changed.model';
+import type { Player } from './models/player.model';
+
 /** Hub WebSocket endpoint — TODO: move to environment configuration in a future ticket. */
 const HUB_URL = 'http://localhost:5030/hubs/game';
 
@@ -137,6 +140,60 @@ export class HubConnectionService {
    */
   joinJam(jamCode: string, displayName: string): Promise<void> {
     return this.#connection.invoke<void>('JoinJam', jamCode, displayName);
+  }
+
+  /**
+   * Registers a handler invoked each time the server sends a `PlayerJoined` event.
+   *
+   * @remarks
+   * Thin delegation to `HubConnection.on`. The SignalR client buffers `on` registrations
+   * regardless of connection state, so callers may register before the connection starts.
+   * State management (appending to a player list) is the responsibility of the caller.
+   *
+   * @param handler - Callback receiving the {@link Player} that joined.
+   */
+  onPlayerJoined(handler: (player: Player) => void): void {
+    this.#connection.on('PlayerJoined', handler);
+  }
+
+  /**
+   * Invokes the `LeaveJam` hub method, removing the caller from their current Jam.
+   *
+   * @remarks
+   * Thin delegation to the underlying {@link HubConnection}. All lobby-level state management
+   * (isLeaving, resetting jamCode and players) is the responsibility of the calling component.
+   *
+   * @returns A promise that resolves when the server confirms the departure, or rejects
+   * with the error code string when the server sends a {@link HubException}.
+   */
+  leaveJam(): Promise<void> {
+    return this.#connection.invoke<void>('LeaveJam');
+  }
+
+  /**
+   * Registers a handler invoked each time the server sends a `PlayerLeft` event.
+   *
+   * @remarks
+   * Thin delegation to `HubConnection.on`. State management (removing from a player list)
+   * is the responsibility of the caller.
+   *
+   * @param handler - Callback receiving the payload containing the `playerId` that left.
+   */
+  onPlayerLeft(handler: (payload: { playerId: string }) => void): void {
+    this.#connection.on('PlayerLeft', handler);
+  }
+
+  /**
+   * Registers a handler invoked each time the server sends a `HostChanged` event.
+   *
+   * @remarks
+   * Thin delegation to `HubConnection.on`. State management (updating isHost flags)
+   * is the responsibility of the caller.
+   *
+   * @param handler - Callback receiving the {@link HostChangedEvent} payload.
+   */
+  onHostChanged(handler: (payload: HostChangedEvent) => void): void {
+    this.#connection.on('HostChanged', handler);
   }
 }
 

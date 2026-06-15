@@ -15,6 +15,7 @@ namespace YtGuessWho.Domain.Aggregates;
 /// </remarks>
 public sealed class Jam
 {
+    private static readonly Random _random = new();
     private readonly List<Player> _players;
 
     /// <summary>The short invite code that uniquely identifies this Jam.</summary>
@@ -86,10 +87,39 @@ public sealed class Jam
     }
 
     /// <summary>
+    /// Removes the <see cref="Player"/> identified by <paramref name="connectionId"/> from this Jam.
+    /// If the removed Player was the Host and at least one Player remains, a random remaining
+    /// Player is promoted to Host.
+    /// </summary>
+    /// <param name="connectionId">The SignalR ConnectionId of the Player to remove.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="connectionId"/> is <c>null</c>.
+    /// </exception>
+    public void RemovePlayer(string connectionId)
+    {
+        ArgumentNullException.ThrowIfNull(connectionId);
+
+        var player = _players.FirstOrDefault(p => p.PlayerId == connectionId);
+
+        if (player is null)
+        {
+            return;
+        }
+
+        var wasHost = player.IsHost;
+        _players.Remove(player);
+
+        if (wasHost && _players.Count > 0)
+        {
+            var newHost = _players[_random.Next(_players.Count)];
+            newHost.PromoteToHost();
+        }
+    }
+
+    /// <summary>
     /// Forces the Jam into the specified phase. Intended exclusively for unit tests.
     /// Must not be called from production code.
     /// </summary>
     /// <param name="phase">The phase to assign.</param>
     internal void SetPhaseForTesting(JamPhase phase) => Phase = phase;
 }
-

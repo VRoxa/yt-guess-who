@@ -15,6 +15,12 @@ public sealed record PlayerLeftPayload(
     string PlayerId);
 
 /// <summary>
+/// Payload sent to remaining Jam group members when a new Host is assigned
+/// because the previous Host left the Jam.
+/// </summary>
+public sealed record HostChangedPayload(string NewHostPlayerId);
+
+/// <summary>
 /// Payload sent to all Jam group members when the Host advances the Jam to the next phase.
 /// </summary>
 public sealed record PhaseChangedPayload(

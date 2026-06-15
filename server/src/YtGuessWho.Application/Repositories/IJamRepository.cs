@@ -25,5 +25,12 @@ public interface IJamRepository
     /// </summary>
     /// <param name="playerId">The player's SignalR ConnectionId.</param>
     Jam? FindByPlayerId(string playerId);
+
+    /// <summary>
+    /// Removes the <see cref="Jam"/> identified by <paramref name="jamCode"/> from the store.
+    /// This method is a no-op if no Jam with the given code exists.
+    /// </summary>
+    /// <param name="jamCode">The invite code of the Jam to remove.</param>
+    void Remove(string jamCode);
 }
 
