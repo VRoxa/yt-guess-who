@@ -1,6 +1,7 @@
 using FluentAssertions;
 using YtGuessWho.Domain.Aggregates;
 using YtGuessWho.Domain.Enums;
+using YtGuessWho.Domain.Exceptions;
 using YtGuessWho.Domain.ValueObjects;
 
 namespace YtGuessWho.Tests.Domain;
@@ -206,6 +207,115 @@ public sealed class JamTests
         // Assert
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("value");
+    }
+
+    // ── Jam.AddPlayer ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void AddPlayer_WhenJamIsInLobby_AddsPlayerToList()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+
+        // Act
+        jam.AddPlayer("joiner-conn", "Bob");
+
+        // Assert
+        jam.Players.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void AddPlayer_WhenJamIsInLobby_NewPlayerIdEqualsConnectionId()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+
+        // Act
+        jam.AddPlayer("joiner-conn", "Bob");
+
+        // Assert
+        jam.Players[1].PlayerId.Should().Be("joiner-conn");
+    }
+
+    [Fact]
+    public void AddPlayer_WhenJamIsInLobby_NewPlayerDisplayNameMatches()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+
+        // Act
+        jam.AddPlayer("joiner-conn", "Bob");
+
+        // Assert
+        jam.Players[1].DisplayName.Should().Be("Bob");
+    }
+
+    [Fact]
+    public void AddPlayer_WhenJamIsInLobby_NewPlayerIsHostIsFalse()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+
+        // Act
+        jam.AddPlayer("joiner-conn", "Bob");
+
+        // Assert
+        jam.Players[1].IsHost.Should().BeFalse();
+    }
+
+    [Fact]
+    public void AddPlayer_WhenJamIsInLobby_NewPlayerScoreIsZero()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+
+        // Act
+        jam.AddPlayer("joiner-conn", "Bob");
+
+        // Assert
+        jam.Players[1].Score.Should().Be(0);
+    }
+
+    [Fact]
+    public void AddPlayer_WhenPhaseIsNotLobby_ThrowsJamNotJoinableException()
+    {
+        // Arrange — force the Jam into a non-Lobby phase via the internal setter
+        var jam = Jam.CreateNew("host-conn", "Alice");
+        jam.SetPhaseForTesting(JamPhase.Submission);
+
+        // Act
+        var act = () => jam.AddPlayer("joiner-conn", "Bob");
+
+        // Assert
+        act.Should().Throw<JamNotJoinableException>();
+    }
+
+    [Fact]
+    public void AddPlayer_WithNullConnectionId_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+
+        // Act
+        var act = () => jam.AddPlayer(null!, "Bob");
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("connectionId");
+    }
+
+    [Fact]
+    public void AddPlayer_WithNullDisplayName_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+
+        // Act
+        var act = () => jam.AddPlayer("joiner-conn", null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("displayName");
     }
 }
 

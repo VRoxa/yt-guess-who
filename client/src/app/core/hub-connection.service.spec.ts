@@ -253,5 +253,35 @@ describe('HubConnectionService', () => {
       await expect(service.createJam('Alice')).rejects.toThrow('Hub error');
     });
   });
+
+  describe('joinJam()', () => {
+    it('invokes JoinJam on the connection with the correct method name and both arguments in order', async () => {
+      // Arrange
+      mockConnection.invoke.mockResolvedValue(undefined);
+
+      // Act
+      await service.joinJam('ABCDEF', 'Bob');
+
+      // Assert
+      expect(mockConnection.invoke).toHaveBeenCalledOnce();
+      expect(mockConnection.invoke).toHaveBeenCalledWith('JoinJam', 'ABCDEF', 'Bob');
+    });
+
+    it('resolves when the connection invoke resolves', async () => {
+      // Arrange
+      mockConnection.invoke.mockResolvedValue(undefined);
+
+      // Act & Assert
+      await expect(service.joinJam('ABCDEF', 'Bob')).resolves.toBeUndefined();
+    });
+
+    it('propagates a rejected promise when the connection invoke rejects', async () => {
+      // Arrange
+      mockConnection.invoke.mockRejectedValue(new Error('JAM_NOT_FOUND'));
+
+      // Act & Assert
+      await expect(service.joinJam('ZZZZZZ', 'Bob')).rejects.toThrow('JAM_NOT_FOUND');
+    });
+  });
 });
 

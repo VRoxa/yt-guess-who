@@ -8,7 +8,7 @@ namespace YtGuessWho.Application.Services.Implementations;
 
 /// <summary>
 /// Default implementation of <see cref="IJamService"/>.
-/// Orchestrates Jam creation by coordinating the Domain aggregate and the repository.
+/// Orchestrates Jam creation and joining by coordinating the Domain aggregate and the repository.
 /// </summary>
 internal sealed class JamService : IJamService
 {
@@ -48,6 +48,36 @@ internal sealed class JamService : IJamService
             command.ConnectionId);
 
         return Task.FromResult(jam.JamCode.Value);
+    }
+
+    /// <inheritdoc />
+    public Task JoinJam(JoinJamCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var existingJam = _repository.FindByPlayerId(command.ConnectionId);
+
+        if (existingJam is not null)
+        {
+            throw new PlayerAlreadyInJamException(command.ConnectionId);
+        }
+
+        var jam = _repository.FindByCode(command.JamCode);
+
+        if (jam is null)
+        {
+            throw new JamNotFoundException(command.JamCode);
+        }
+
+        // JamNotJoinableException propagates naturally from the domain if Phase != Lobby.
+        jam.AddPlayer(command.ConnectionId, command.DisplayName);
+
+        _logger.LogInformation(
+            "Player joined Jam. JamCode: {JamCode}, ConnectionId: {ConnectionId}",
+            command.JamCode,
+            command.ConnectionId);
+
+        return Task.CompletedTask;
     }
 }
 

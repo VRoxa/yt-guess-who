@@ -14,9 +14,11 @@ import { HubConnectionService } from '../core/hub-connection.service';
 function createMockHubService(
   isConnected = false,
   createJamImpl?: () => Promise<string>,
+  joinJamImpl?: () => Promise<void>,
 ) {
   const connect = vi.fn().mockResolvedValue(undefined);
   const createJam = vi.fn(createJamImpl ?? (() => Promise.resolve('ABCDEF')));
+  const joinJam = vi.fn(joinJamImpl ?? (() => Promise.resolve()));
 
   return {
     isConnected: signal(isConnected),
@@ -24,6 +26,7 @@ function createMockHubService(
     errorMessage: signal<string | undefined>(undefined),
     connect,
     createJam,
+    joinJam,
   };
 }
 
@@ -238,6 +241,147 @@ describe('LobbyComponent', () => {
 
     // Assert
     expect(screen.getByText('Server unavailable')).toBeTruthy();
+  });
+
+  // ── Join Jam flow ──────────────────────────────────────────────────────────
+
+  it('disables the Join Jam button when the display name is empty', async () => {
+    // Arrange & Act
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: createMockHubService(true) }],
+    });
+    await userEvent.setup().type(screen.getByLabelText(/jam code/i), 'ABCDEF');
+
+    // Assert
+    const button = screen.getByRole('button', { name: /join jam/i }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+  });
+
+  it('disables the Join Jam button when the jam code is empty', async () => {
+    // Arrange & Act
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: createMockHubService(true) }],
+    });
+    await userEvent.setup().type(screen.getByLabelText(/your display name/i), 'Bob');
+
+    // Assert — jam code input is empty
+    const button = screen.getByRole('button', { name: /join jam/i }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+  });
+
+  it('enables the Join Jam button when both display name and jam code are non-empty', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: createMockHubService(true) }],
+    });
+
+    // Act
+    await user.type(screen.getByLabelText(/your display name/i), 'Bob');
+    await user.type(screen.getByLabelText(/jam code/i), 'ABCDEF');
+
+    // Assert
+    const button = screen.getByRole('button', { name: /join jam/i }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+  });
+
+  it('calls joinJam with the trimmed jam code and display name when clicked', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(true);
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your display name/i), '  Bob  ');
+    await user.type(screen.getByLabelText(/jam code/i), '  ABCDEF  ');
+
+    // Act
+    await user.click(screen.getByRole('button', { name: /join jam/i }));
+
+    // Assert
+    expect(mockService.joinJam).toHaveBeenCalledOnce();
+    expect(mockService.joinJam).toHaveBeenCalledWith('ABCDEF', 'Bob');
+  });
+
+  it('disables the Join Jam button while the request is in-flight', async () => {
+    // Arrange
+    let resolveJoin!: () => void;
+    const pendingPromise = new Promise<void>(resolve => {
+      resolveJoin = resolve;
+    });
+    const mockService = createMockHubService(true, undefined, () => pendingPromise);
+    const user = userEvent.setup();
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your display name/i), 'Bob');
+    await user.type(screen.getByLabelText(/jam code/i), 'ABCDEF');
+
+    // Act — click but do not await the in-flight call
+    const clickPromise = user.click(screen.getByRole('button', { name: /join jam/i }));
+
+    // Assert — button is disabled while in-flight
+    const button = screen.getByRole('button', { name: /joining…/i }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+
+    // Cleanup
+    resolveJoin();
+    await clickPromise;
+  });
+
+  it('renders the jam code prominently after a successful join', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(true);
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your display name/i), 'Bob');
+    await user.type(screen.getByLabelText(/jam code/i), 'WXPGRT');
+
+    // Act
+    await user.click(screen.getByRole('button', { name: /join jam/i }));
+
+    // Assert
+    expect(screen.getByText('WXPGRT')).toBeTruthy();
+  });
+
+  it('hides the form after a successful join', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(true);
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your display name/i), 'Bob');
+    await user.type(screen.getByLabelText(/jam code/i), 'WXPGRT');
+
+    // Act
+    await user.click(screen.getByRole('button', { name: /join jam/i }));
+
+    // Assert
+    expect(screen.queryByRole('button', { name: /join jam/i })).toBeNull();
+  });
+
+  it('renders an error message when joinJam rejects', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(
+      true,
+      undefined,
+      () => Promise.reject(new Error('JAM_NOT_FOUND')),
+    );
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your display name/i), 'Bob');
+    await user.type(screen.getByLabelText(/jam code/i), 'ZZZZZZ');
+
+    // Act
+    await user.click(screen.getByRole('button', { name: /join jam/i }));
+
+    // Assert
+    expect(screen.getByText('JAM_NOT_FOUND')).toBeTruthy();
   });
 });
 

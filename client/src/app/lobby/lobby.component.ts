@@ -6,8 +6,8 @@ import { HubConnectionService } from '../core/hub-connection.service';
  * Lobby screen component.
  *
  * @remarks
- * Renders the "Create Jam" form when the Host has not yet created a Jam.
- * Once a Jam is successfully created, hides the form and displays the Jam code prominently.
+ * Renders the lobby form where a user can either create a new Jam or join an existing one.
+ * Once either action succeeds, hides the form and displays the confirmed Jam code prominently.
  *
  * All state is managed locally via signals. Hub communication is delegated to
  * {@link HubConnectionService} — this component contains no SignalR logic.
@@ -19,8 +19,6 @@ import { HubConnectionService } from '../core/hub-connection.service';
   template: `
     @if (jamCode() === null) {
       <div class="lobby-form">
-        <h2>Create a Jam</h2>
-
         <label for="display-name">Your display name</label>
         <input
           id="display-name"
@@ -30,13 +28,32 @@ import { HubConnectionService } from '../core/hub-connection.service';
           (input)="displayName.set($any($event.target).value)"
         />
 
-        <button
-          type="button"
-          [disabled]="!displayName().trim() || isCreating() || hubService.isTransitioning()"
-          (click)="onCreateJam()"
-        >
-          {{ isCreating() ? 'Creating…' : 'Create Jam' }}
-        </button>
+        <label for="jam-code">Jam code</label>
+        <input
+          id="jam-code"
+          type="text"
+          placeholder="Enter a Jam code to join"
+          [value]="enteredJamCode()"
+          (input)="enteredJamCode.set($any($event.target).value)"
+        />
+
+        <div class="button-row">
+          <button
+            type="button"
+            [disabled]="!displayName().trim() || isCreating() || isJoining() || hubService.isTransitioning()"
+            (click)="onCreateJam()"
+          >
+            {{ isCreating() ? 'Creating…' : 'Create Jam' }}
+          </button>
+
+          <button
+            type="button"
+            [disabled]="!displayName().trim() || !enteredJamCode().trim() || isJoining() || isCreating() || hubService.isTransitioning()"
+            (click)="onJoinJam()"
+          >
+            {{ isJoining() ? 'Joining…' : 'Join Jam' }}
+          </button>
+        </div>
 
         @if (errorMessage() !== undefined || hubService.errorMessage() !== undefined) {
           <p class="error">{{ errorMessage() ?? hubService.errorMessage() }}</p>
@@ -55,14 +72,20 @@ import { HubConnectionService } from '../core/hub-connection.service';
 export class LobbyComponent {
   protected readonly hubService = inject(HubConnectionService);
 
-  /** Display name entered by the Host. */
+  /** Display name entered by the user. Shared between the create and join flows. */
   protected readonly displayName = signal<string>('');
 
-  /** The Jam code returned by the server after a successful create. `null` before creation. */
+  /** Jam code typed by the user when they want to join an existing Jam. */
+  protected readonly enteredJamCode = signal<string>('');
+
+  /** The confirmed Jam code shown after a successful create or join. `null` before either action. */
   protected readonly jamCode = signal<string | null>(null);
 
   /** `true` while the CreateJam hub call is in-flight. */
   protected readonly isCreating = signal<boolean>(false);
+
+  /** `true` while the JoinJam hub call is in-flight. */
+  protected readonly isJoining = signal<boolean>(false);
 
   /** Human-readable error from the most recent failed attempt. */
   protected readonly errorMessage = signal<string | undefined>(undefined);
@@ -98,5 +121,37 @@ export class LobbyComponent {
       this.isCreating.set(false);
     }
   }
-}
 
+  /**
+   * Invokes the JoinJam hub method. If not yet connected, attempts to establish
+   * the connection first. Shows an error if either step fails.
+   */
+  protected async onJoinJam(): Promise<void> {
+    this.errorMessage.set(undefined);
+
+    if (!this.hubService.isConnected()) {
+      await this.hubService.connect();
+
+      if (!this.hubService.isConnected()) {
+        this.errorMessage.set(
+          this.hubService.errorMessage() ?? 'Could not connect to the server.',
+        );
+        return;
+      }
+    }
+
+    this.isJoining.set(true);
+
+    try {
+      const code = this.enteredJamCode().trim();
+      await this.hubService.joinJam(code, this.displayName().trim());
+      this.jamCode.set(code);
+    } catch (error) {
+      this.errorMessage.set(
+        error instanceof Error ? error.message : 'Failed to join Jam. Please try again.',
+      );
+    } finally {
+      this.isJoining.set(false);
+    }
+  }
+}

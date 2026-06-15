@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using YtGuessWho.Application.Commands;
 using YtGuessWho.Application.Exceptions;
 using YtGuessWho.Application.Services;
+using YtGuessWho.Domain.Exceptions;
 using YtGuessWho.Infrastructure.Hubs.Payloads;
 
 namespace YtGuessWho.Infrastructure.Hubs;
@@ -83,6 +84,67 @@ public sealed class GameHub : Hub<IGameHubClient>
                 "You are already in an active Jam."));
 
             return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// Adds the calling Player to an existing Jam identified by its invite code.
+    /// </summary>
+    /// <param name="jamCode">The invite code of the Jam to join.</param>
+    /// <param name="displayName">The display name chosen by the joining Player.</param>
+    /// <remarks>
+    /// On success: the caller is added to the SignalR group keyed by the Jam code.
+    /// On error: an <c>Error</c> event is sent to the caller and a <see cref="HubException"/>
+    /// is thrown so the client's <c>invoke()</c> Promise rejects with the error code.
+    /// </remarks>
+    /// <exception cref="HubException">
+    /// Thrown (after sending <c>Error</c> to the caller) for <c>ALREADY_IN_JAM</c>,
+    /// <c>JAM_NOT_FOUND</c>, and <c>JAM_NOT_JOINABLE</c> conditions.
+    /// </exception>
+    public async Task JoinJam(string jamCode, string displayName)
+    {
+        try
+        {
+            await _jamService.JoinJam(
+                new JoinJamCommand(Context.ConnectionId, jamCode, displayName),
+                Context.ConnectionAborted);
+
+            await Groups.AddToGroupAsync(Context.ConnectionId, jamCode, Context.ConnectionAborted);
+
+            _logger.LogInformation(
+                "Player joined Jam {JamCode}. ConnectionId: {ConnectionId}",
+                jamCode,
+                Context.ConnectionId);
+        }
+        catch (PlayerAlreadyInJamException)
+        {
+            _logger.LogWarning(
+                "ALREADY_IN_JAM: connection {ConnectionId} attempted to join Jam {JamCode} while already in a Jam.",
+                Context.ConnectionId,
+                jamCode);
+
+            await Clients.Caller.Error(new ErrorPayload("ALREADY_IN_JAM", "You are already in an active Jam."));
+            throw new HubException("ALREADY_IN_JAM");
+        }
+        catch (JamNotFoundException)
+        {
+            _logger.LogWarning(
+                "JAM_NOT_FOUND: connection {ConnectionId} attempted to join non-existent Jam {JamCode}.",
+                Context.ConnectionId,
+                jamCode);
+
+            await Clients.Caller.Error(new ErrorPayload("JAM_NOT_FOUND", $"No Jam with code '{jamCode}' was found."));
+            throw new HubException("JAM_NOT_FOUND");
+        }
+        catch (JamNotJoinableException)
+        {
+            _logger.LogWarning(
+                "JAM_NOT_JOINABLE: connection {ConnectionId} attempted to join Jam {JamCode} which is not in Lobby phase.",
+                Context.ConnectionId,
+                jamCode);
+
+            await Clients.Caller.Error(new ErrorPayload("JAM_NOT_JOINABLE", "This Jam is no longer accepting new players."));
+            throw new HubException("JAM_NOT_JOINABLE");
         }
     }
 

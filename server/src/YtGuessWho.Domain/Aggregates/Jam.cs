@@ -1,5 +1,6 @@
 using YtGuessWho.Domain.Entities;
 using YtGuessWho.Domain.Enums;
+using YtGuessWho.Domain.Exceptions;
 using YtGuessWho.Domain.ValueObjects;
 
 namespace YtGuessWho.Domain.Aggregates;
@@ -57,5 +58,38 @@ public sealed class Jam
 
         return new Jam(code, host);
     }
+
+    /// <summary>
+    /// Adds a new non-host <see cref="Player"/> to this Jam.
+    /// </summary>
+    /// <param name="connectionId">
+    /// The SignalR ConnectionId of the joining client. Becomes the Player's <c>PlayerId</c>.
+    /// </param>
+    /// <param name="displayName">The display name chosen by the joining Player.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="connectionId"/> or <paramref name="displayName"/> is <c>null</c>.
+    /// </exception>
+    /// <exception cref="JamNotJoinableException">
+    /// Thrown when the Jam is not in <see cref="JamPhase.Lobby"/> phase.
+    /// </exception>
+    public void AddPlayer(string connectionId, string displayName)
+    {
+        ArgumentNullException.ThrowIfNull(connectionId);
+        ArgumentNullException.ThrowIfNull(displayName);
+
+        if (Phase != JamPhase.Lobby)
+        {
+            throw new JamNotJoinableException(Phase);
+        }
+
+        _players.Add(new Player(connectionId, displayName, isHost: false));
+    }
+
+    /// <summary>
+    /// Forces the Jam into the specified phase. Intended exclusively for unit tests.
+    /// Must not be called from production code.
+    /// </summary>
+    /// <param name="phase">The phase to assign.</param>
+    internal void SetPhaseForTesting(JamPhase phase) => Phase = phase;
 }
 

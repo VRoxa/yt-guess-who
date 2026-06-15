@@ -121,5 +121,22 @@ export class HubConnectionService {
   createJam(displayName: string): Promise<string> {
     return this.#connection.invoke<string>('CreateJam', displayName);
   }
+
+  /**
+   * Invokes the `JoinJam` hub method, adding the caller to an existing Jam.
+   *
+   * @remarks
+   * Thin delegation to the underlying {@link HubConnection}. All lobby-level
+   * state management (isJoining, jamCode, errorMessage) is the responsibility of the
+   * calling component, not this service.
+   *
+   * @param jamCode - The invite code of the Jam to join.
+   * @param displayName - The display name chosen by the joining Player.
+   * @returns A promise that resolves when the server confirms the join, or rejects
+   * with the error code string when the server sends a {@link HubException}.
+   */
+  joinJam(jamCode: string, displayName: string): Promise<void> {
+    return this.#connection.invoke<void>('JoinJam', jamCode, displayName);
+  }
 }
 
