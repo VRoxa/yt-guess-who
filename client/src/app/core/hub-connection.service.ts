@@ -64,6 +64,11 @@ export class HubConnectionService {
     this.#connection.onclose(() => {
       this.connectionState.set(this.#connection.state);
     });
+
+    // Attempt to connect automatically when the application starts.
+    // connect() handles its own errors and never rejects, so discarding the
+    // promise here is intentional and safe.
+    void this.connect();
   }
 
   /**
@@ -100,6 +105,21 @@ export class HubConnectionService {
     this.connectionState.set(HubConnectionState.Disconnecting);
     await this.#connection.stop();
     this.connectionState.set(this.#connection.state);
+  }
+
+  /**
+   * Invokes the `CreateJam` hub method and returns the generated Jam code.
+   *
+   * @remarks
+   * This is a thin delegation to the underlying {@link HubConnection}. All lobby-level
+   * state management (isCreating, jamCode, errorMessage) is the responsibility of the
+   * calling component, not this service.
+   *
+   * @param displayName - The display name chosen by the Host.
+   * @returns A promise that resolves with the Jam code string returned by the server.
+   */
+  createJam(displayName: string): Promise<string> {
+    return this.#connection.invoke<string>('CreateJam', displayName);
   }
 }
 

@@ -1,4 +1,6 @@
 using Autofac;
+using YtGuessWho.Application.Repositories;
+using YtGuessWho.Infrastructure.Repositories;
 
 namespace YtGuessWho.Infrastructure.DependencyInjection;
 
@@ -11,9 +13,10 @@ public sealed class InfrastructureModule : Module
 {
     protected override void Load(ContainerBuilder builder)
     {
-        // Infrastructure implementations will be registered here as they are introduced.
-        // Example:
-        //   builder.RegisterType<InMemoryJamRepository>().As<IJamRepository>().SingleInstance();
+        builder
+            .RegisterType<InMemoryJamRepository>()
+            .As<IJamRepository>()
+            .SingleInstance();
     }
 }
 

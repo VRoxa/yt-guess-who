@@ -1,5 +1,9 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using YtGuessWho.Application.Commands;
+using YtGuessWho.Application.Exceptions;
+using YtGuessWho.Application.Services;
+using YtGuessWho.Infrastructure.Hubs.Payloads;
 
 namespace YtGuessWho.Infrastructure.Hubs;
 
@@ -18,15 +22,68 @@ namespace YtGuessWho.Infrastructure.Hubs;
 /// </remarks>
 public sealed class GameHub : Hub<IGameHubClient>
 {
+    private readonly IJamService _jamService;
     private readonly ILogger<GameHub> _logger;
 
     /// <summary>
     /// Initialises a new instance of <see cref="GameHub"/>.
     /// </summary>
+    /// <param name="jamService">Application service that orchestrates Jam lifecycle use-cases.</param>
     /// <param name="logger">Structured logger injected by the DI container.</param>
-    public GameHub(ILogger<GameHub> logger)
+    public GameHub(IJamService jamService, ILogger<GameHub> logger)
     {
+        _jamService = jamService;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Creates a new Jam, registers the caller as the Host, and returns the Jam code.
+    /// </summary>
+    /// <param name="displayName">The display name chosen by the Host.</param>
+    /// <returns>
+    /// The generated Jam code string on success, or <see cref="string.Empty"/> when the caller
+    /// is already in a Jam (in which case an <c>Error</c> event is sent to the caller instead).
+    /// </returns>
+    /// <remarks>
+    /// On success: the caller is added to the SignalR group keyed by the Jam code, and a
+    /// <c>PlayerJoined</c> event is broadcast to the group.
+    /// On <c>ALREADY_IN_JAM</c>: an <c>Error</c> event is sent exclusively to the caller;
+    /// the exception is not propagated.
+    /// </remarks>
+    public async Task<string> CreateJam(string displayName)
+    {
+        try
+        {
+            var jamCode = await _jamService.CreateJam(
+                new CreateJamCommand(Context.ConnectionId, displayName),
+                Context.ConnectionAborted);
+
+            await Groups.AddToGroupAsync(Context.ConnectionId, jamCode, Context.ConnectionAborted);
+
+            await Clients.Group(jamCode).PlayerJoined(new PlayerJoinedPayload(
+                Context.ConnectionId,
+                displayName,
+                IsHost: true));
+
+            _logger.LogInformation(
+                "Jam {JamCode} created by connection {ConnectionId}",
+                jamCode,
+                Context.ConnectionId);
+
+            return jamCode;
+        }
+        catch (PlayerAlreadyInJamException)
+        {
+            _logger.LogWarning(
+                "ALREADY_IN_JAM: connection {ConnectionId} attempted to create a Jam while already in one.",
+                Context.ConnectionId);
+
+            await Clients.Caller.Error(new ErrorPayload(
+                "ALREADY_IN_JAM",
+                "You are already in an active Jam."));
+
+            return string.Empty;
+        }
     }
 
     /// <inheritdoc />
@@ -70,4 +127,3 @@ public sealed class GameHub : Hub<IGameHubClient>
         await base.OnDisconnectedAsync(exception);
     }
 }
-

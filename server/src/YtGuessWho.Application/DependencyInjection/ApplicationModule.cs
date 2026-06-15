@@ -1,5 +1,6 @@
 using Autofac;
 using Microsoft.Extensions.Hosting;
+using YtGuessWho.Application.Services;
 using YtGuessWho.Application.Services.Implementations;
 
 namespace YtGuessWho.Application.DependencyInjection;
@@ -16,6 +17,11 @@ public sealed class ApplicationModule : Module
             .RegisterType<AppBootstrapper>()
             .As<IHostedService>()
             .SingleInstance();
+
+        builder
+            .RegisterType<JamService>()
+            .As<IJamService>()
+            .InstancePerLifetimeScope();
     }
 }
 

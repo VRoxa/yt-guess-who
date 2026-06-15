@@ -1,0 +1,81 @@
+:host {
+  display: block;
+  padding: 2rem;
+}
+
+.lobby-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  max-width: 28rem;
+  margin: 0 auto;
+
+  h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.5rem;
+  }
+
+  label {
+    align-self: flex-start;
+    font-weight: 500;
+  }
+
+  input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+
+  button {
+    padding: 0.6rem 1.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .error {
+    color: #c0392b;
+    margin: 0;
+    font-size: 0.9rem;
+  }
+}
+
+.jam-created {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin: 4rem auto;
+  text-align: center;
+
+  .jam-label {
+    margin: 0;
+    font-size: 1rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .jam-code {
+    margin: 0;
+    font-size: 5rem;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    line-height: 1;
+  }
+
+  .jam-hint {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #555;
+  }
+}
+

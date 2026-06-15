@@ -1,18 +1,18 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "server\src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YtGuessWho.Api", "src\YtGuessWho.Api\YtGuessWho.Api.csproj", "{817C9260-284A-4684-BD73-9E5337476CFA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YtGuessWho.Api", "server\src\YtGuessWho.Api\YtGuessWho.Api.csproj", "{817C9260-284A-4684-BD73-9E5337476CFA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YtGuessWho.Domain", "src\YtGuessWho.Domain\YtGuessWho.Domain.csproj", "{4C4D2413-2B08-4E7B-B992-54CC32559202}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YtGuessWho.Domain", "server\src\YtGuessWho.Domain\YtGuessWho.Domain.csproj", "{4C4D2413-2B08-4E7B-B992-54CC32559202}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YtGuessWho.Application", "src\YtGuessWho.Application\YtGuessWho.Application.csproj", "{4FDB132B-08C8-4AFA-8979-1235874D4A67}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YtGuessWho.Application", "server\src\YtGuessWho.Application\YtGuessWho.Application.csproj", "{4FDB132B-08C8-4AFA-8979-1235874D4A67}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YtGuessWho.Infrastructure", "src\YtGuessWho.Infrastructure\YtGuessWho.Infrastructure.csproj", "{03BA0A79-D867-42BD-A30E-BA9E6CB2D61C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YtGuessWho.Infrastructure", "server\src\YtGuessWho.Infrastructure\YtGuessWho.Infrastructure.csproj", "{03BA0A79-D867-42BD-A30E-BA9E6CB2D61C}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "server\tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YtGuessWho.Tests", "tests\YtGuessWho.Tests\YtGuessWho.Tests.csproj", "{F5864AA5-5B4E-49C9-9725-86F518AB4EF1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YtGuessWho.Tests", "server\tests\YtGuessWho.Tests\YtGuessWho.Tests.csproj", "{F5864AA5-5B4E-49C9-9725-86F518AB4EF1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

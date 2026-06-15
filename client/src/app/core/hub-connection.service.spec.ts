@@ -8,6 +8,7 @@ type MockConnection = {
   start: ReturnType<typeof vi.fn>;
   stop: ReturnType<typeof vi.fn>;
   onclose: ReturnType<typeof vi.fn>;
+  invoke: ReturnType<typeof vi.fn>;
 };
 
 describe('HubConnectionService', () => {
@@ -20,6 +21,7 @@ describe('HubConnectionService', () => {
       start: vi.fn().mockResolvedValue(undefined),
       stop: vi.fn().mockResolvedValue(undefined),
       onclose: vi.fn(),
+      invoke: vi.fn().mockResolvedValue('ABCDEF'),
     };
 
     TestBed.configureTestingModule({
@@ -216,6 +218,39 @@ describe('HubConnectionService', () => {
 
       // Assert
       expect(service.connectionState()).toBe(HubConnectionState.Disconnected);
+    });
+  });
+
+  describe('createJam()', () => {
+    it('invokes CreateJam on the connection with the correct method name and display name', async () => {
+      // Arrange
+      const displayName = 'Alice';
+
+      // Act
+      await service.createJam(displayName);
+
+      // Assert
+      expect(mockConnection.invoke).toHaveBeenCalledOnce();
+      expect(mockConnection.invoke).toHaveBeenCalledWith('CreateJam', displayName);
+    });
+
+    it('returns the Jam code string resolved by the connection', async () => {
+      // Arrange
+      mockConnection.invoke.mockResolvedValue('WXPGRT');
+
+      // Act
+      const result = await service.createJam('Alice');
+
+      // Assert
+      expect(result).toBe('WXPGRT');
+    });
+
+    it('propagates a rejected promise when the connection invoke rejects', async () => {
+      // Arrange
+      mockConnection.invoke.mockRejectedValue(new Error('Hub error'));
+
+      // Act & Assert
+      await expect(service.createJam('Alice')).rejects.toThrow('Hub error');
     });
   });
 });
