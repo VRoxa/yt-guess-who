@@ -4,6 +4,7 @@ namespace YtGuessWho.Domain.Entities;
 /// Represents a human participant connected to a <see cref="YtGuessWho.Domain.Aggregates.Jam"/>.
 /// </summary>
 /// <remarks>
+/// <b>This class is a data structure only.</b>
 /// The <see cref="PlayerId"/> is the SignalR <c>ConnectionId</c> for the duration of the connection,
 /// as defined in <c>docs/realtime-communication.md — Rules for Implementors, rule 6</c>.
 /// </remarks>
@@ -21,9 +22,15 @@ public sealed class Player
     /// <summary>
     /// Whether this Player is the Host of the Jam — i.e. the Player who created it.
     /// Only one Player per Jam may have <c>IsHost = true</c>.
+    /// The setter is <c>internal</c> so Domain-layer companion extension classes can promote
+    /// a new Host when the previous Host leaves, without exposing mutation to outer layers.
     /// </summary>
-    public bool IsHost { get; private set; }
+    public bool IsHost { get; internal set; }
 
+    /// <summary>
+    /// The cumulative Score accumulated by this Player across all completed Rounds.
+    /// Starts at <c>0</c> and increases as Rounds resolve.
+    /// </summary>
     /// <summary>
     /// The cumulative Score accumulated by this Player across all completed Rounds.
     /// Starts at <c>0</c> and increases as Rounds resolve.
@@ -55,12 +62,4 @@ public sealed class Player
         DisplayName = displayName;
         IsHost = isHost;
     }
-
-    /// <summary>
-    /// Promotes this Player to Host status.
-    /// Called exclusively by <see cref="YtGuessWho.Domain.Aggregates.Jam.RemovePlayer"/>
-    /// when the departing Player held the Host role and at least one Player remains.
-    /// </summary>
-    internal void PromoteToHost() => IsHost = true;
 }
-

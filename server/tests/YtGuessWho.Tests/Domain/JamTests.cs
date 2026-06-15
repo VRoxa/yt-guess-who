@@ -2,6 +2,7 @@ using FluentAssertions;
 using YtGuessWho.Domain.Aggregates;
 using YtGuessWho.Domain.Enums;
 using YtGuessWho.Domain.Exceptions;
+using YtGuessWho.Domain.Extensions;
 using YtGuessWho.Domain.ValueObjects;
 
 namespace YtGuessWho.Tests.Domain;
@@ -281,7 +282,7 @@ public sealed class JamTests
     {
         // Arrange — force the Jam into a non-Lobby phase via the internal setter
         var jam = Jam.CreateNew("host-conn", "Alice");
-        jam.SetPhaseForTesting(JamPhase.Submission);
+        jam.Phase = JamPhase.Submission;
 
         // Act
         var act = () => jam.AddPlayer("joiner-conn", "Bob");

@@ -144,16 +144,16 @@ Tests for Domain and Application layers must never require a running ASP.NET Cor
 
 ## Invariants & Business Rules Location
 
-All business invariants live **exclusively in the Domain layer**, inside the aggregates that own them. They are never validated in a service, hub, or controller.
+All business invariants live **exclusively in the Domain layer** — in companion `static` extension classes co-located with the aggregates they operate on (e.g., `JamExtensions.cs` alongside `Jam.cs`). They are never validated in a service, hub, or controller. Domain aggregates and entities are **pure data classes**; their extension classes own all business logic. See `docs/guidelines/csharp-coding-standards.md §2.15`.
 
 | Rule | Enforced in |
 |------|------------|
-| A Jam can only advance to the next phase in sequence | `Jam.AdvancePhase()` |
-| Only the Host may advance the phase | `Jam.AdvancePhase(requestingPlayerId)` |
+| A Jam can only advance to the next phase in sequence | `JamExtensions.AdvancePhase()` |
+| Only the Host may advance the phase | `JamExtensions.AdvancePhase(requestingPlayerId)` |
 | A Submission must be a valid YouTube URL | `YoutubeUrl` value object constructor |
-| A Player may only submit one song per Jam | `Jam.SubmitSong()` |
-| A Player may only submit one guess per Round | `Round.SubmitGuess()` |
-| A Jam cannot start Playback without at least one Submission | `Jam.AdvancePhase()` |
+| A Player may only submit one song per Jam | `JamExtensions.SubmitSong()` |
+| A Player may only submit one guess per Round | `RoundExtensions.SubmitGuess()` |
+| A Jam cannot start Playback without at least one Submission | `JamExtensions.AdvancePhase()` |
 
 ---
 

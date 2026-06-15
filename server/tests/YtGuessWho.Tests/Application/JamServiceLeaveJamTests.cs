@@ -6,6 +6,7 @@ using YtGuessWho.Application.Exceptions;
 using YtGuessWho.Application.Repositories;
 using YtGuessWho.Application.Services.Implementations;
 using YtGuessWho.Domain.Aggregates;
+using YtGuessWho.Domain.Extensions;
 
 namespace YtGuessWho.Tests.Application;
 
