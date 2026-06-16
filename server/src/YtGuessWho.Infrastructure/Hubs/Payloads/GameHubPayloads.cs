@@ -11,8 +11,13 @@ public sealed record PlayerJoinedPayload(
 /// <summary>
 /// Payload sent to remaining Jam group members when a Player disconnects.
 /// </summary>
-public sealed record PlayerLeftPayload(
-    string PlayerId);
+public sealed record PlayerLeftPayload(string PlayerId);
+
+/// <summary>
+/// Payload sent to all Jam group members when a Player successfully submits their song URL.
+/// Does not reveal the URL — only signals that the Player has submitted.
+/// </summary>
+public sealed record SongSubmittedPayload(string PlayerId);
 
 /// <summary>
 /// Payload sent to remaining Jam group members when a new Host is assigned
@@ -23,8 +28,7 @@ public sealed record HostChangedPayload(string NewHostPlayerId);
 /// <summary>
 /// Payload sent to all Jam group members when the Host advances the Jam to the next phase.
 /// </summary>
-public sealed record PhaseChangedPayload(
-    string NewPhase);
+public sealed record PhaseChangedPayload(string NewPhase);
 
 /// <summary>
 /// Payload sent to all Jam group members at the start of a Playback round.
@@ -38,8 +42,7 @@ public sealed record RoundStartedPayload(
 /// Payload broadcast to the Jam group each time any Player submits a Guess.
 /// Does not reveal the Guess content — only signals that a Player has submitted.
 /// </summary>
-public sealed record GuessSubmittedPayload(
-    string PlayerId);
+public sealed record GuessSubmittedPayload(string PlayerId);
 
 /// <summary>
 /// Payload broadcast to the Jam group when all Players have submitted a Guess for the current Round.
@@ -55,8 +58,7 @@ public sealed record RoundEndedPayload(
 /// Payload broadcast to the Jam group when all Rounds are complete.
 /// Contains the final leaderboard ordered by Score.
 /// </summary>
-public sealed record GameEndedPayload(
-    IReadOnlyList<PlayerFinalScore> FinalScores);
+public sealed record GameEndedPayload(IReadOnlyList<PlayerFinalScore> FinalScores);
 
 /// <summary>
 /// A single entry in the <see cref="GameEndedPayload.FinalScores"/> leaderboard.

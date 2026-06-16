@@ -36,6 +36,13 @@ public interface IGameHubClient
     Task PhaseChanged(PhaseChangedPayload payload);
 
     /// <summary>
+    /// Broadcast to all Jam group members when a Player successfully submits their song URL.
+    /// Does not reveal the URL — only signals which Player has submitted, so clients
+    /// can update a submission progress indicator.
+    /// </summary>
+    Task SongSubmitted(SongSubmittedPayload payload);
+
+    /// <summary>
     /// Broadcast to all Jam group members when every Player has submitted a Submission.
     /// Carries no payload — the event itself is the signal.
     /// </summary>

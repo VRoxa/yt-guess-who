@@ -1,0 +1,56 @@
+// Styles for JamCodeHeroComponent — the hero card and copy button.
+
+.jam-code-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4); // 16px between hero card and copy button
+}
+
+// Hero container — the glowing card that displays the Jam code.
+.jam-created__container {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3); // 12px between label / code / hint
+  padding: var(--space-8) var(--space-12); // 32px 48px
+  background-color: var(--color-jam-code-bg);
+  border: 2px solid color-mix(in srgb, var(--md-primary) 40%, transparent);
+  border-radius: 20px;
+  box-shadow:
+    var(--elevation-2),
+    0 0 40px color-mix(in srgb, var(--md-primary) 20%, transparent);
+  animation: jam-code-enter var(--duration-standard) var(--ease-decelerate) both;
+}
+
+.jam-label {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--md-on-primary-container) 70%, transparent);
+}
+
+.jam-code {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 5rem;
+  line-height: 1;
+  letter-spacing: 0.25em;
+  color: var(--color-jam-code-text);
+  text-rendering: optimizeLegibility;
+}
+
+.jam-hint {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--md-on-primary-container) 60%, transparent);
+  max-width: 280px;
+  text-align: center;
+}
+

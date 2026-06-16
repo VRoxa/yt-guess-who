@@ -5,10 +5,12 @@ import { HUB_CONNECTION, HubConnectionService } from './hub-connection.service';
 
 type MockConnection = {
   state: HubConnectionState;
+  connectionId: string | null;
   start: ReturnType<typeof vi.fn>;
   stop: ReturnType<typeof vi.fn>;
   onclose: ReturnType<typeof vi.fn>;
   on: ReturnType<typeof vi.fn>;
+  off: ReturnType<typeof vi.fn>;
   invoke: ReturnType<typeof vi.fn>;
 };
 
@@ -19,10 +21,12 @@ describe('HubConnectionService', () => {
   beforeEach(() => {
     mockConnection = {
       state: HubConnectionState.Disconnected,
+      connectionId: null,
       start: vi.fn().mockResolvedValue(undefined),
       stop: vi.fn().mockResolvedValue(undefined),
       onclose: vi.fn(),
       on: vi.fn(),
+      off: vi.fn(),
       invoke: vi.fn().mockResolvedValue('ABCDEF'),
     };
 
@@ -413,6 +417,190 @@ describe('HubConnectionService', () => {
       // Assert
       expect(handler).toHaveBeenCalledOnce();
       expect(handler).toHaveBeenCalledWith(payload);
+    });
+  });
+
+  describe('getConnectionId()', () => {
+    it('returns the connectionId from the underlying connection', () => {
+      // Arrange
+      mockConnection.connectionId = 'test-conn-id';
+
+      // Act
+      const result = service.getConnectionId();
+
+      // Assert
+      expect(result).toBe('test-conn-id');
+    });
+  });
+
+  describe('advancePhase()', () => {
+    it('invokes AdvancePhase on the connection with the correct method name', async () => {
+      // Arrange
+      mockConnection.invoke.mockResolvedValue(undefined);
+
+      // Act
+      await service.advancePhase();
+
+      // Assert
+      expect(mockConnection.invoke).toHaveBeenCalledOnce();
+      expect(mockConnection.invoke).toHaveBeenCalledWith('AdvancePhase');
+    });
+
+    it('resolves when the connection invoke resolves', async () => {
+      // Arrange
+      mockConnection.invoke.mockResolvedValue(undefined);
+
+      // Act & Assert
+      await expect(service.advancePhase()).resolves.toBeUndefined();
+    });
+
+    it('propagates a rejected promise when the connection invoke rejects', async () => {
+      // Arrange
+      mockConnection.invoke.mockRejectedValue(new Error('UNAUTHORIZED'));
+
+      // Act & Assert
+      await expect(service.advancePhase()).rejects.toThrow('UNAUTHORIZED');
+    });
+  });
+
+  describe('submitSong()', () => {
+    it('invokes SubmitSong on the connection with the correct method name and URL', async () => {
+      // Arrange
+      mockConnection.invoke.mockResolvedValue(undefined);
+      const url = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+
+      // Act
+      await service.submitSong(url);
+
+      // Assert
+      expect(mockConnection.invoke).toHaveBeenCalledOnce();
+      expect(mockConnection.invoke).toHaveBeenCalledWith('SubmitSong', url);
+    });
+
+    it('resolves when the connection invoke resolves', async () => {
+      // Arrange
+      mockConnection.invoke.mockResolvedValue(undefined);
+
+      // Act & Assert
+      await expect(service.submitSong('https://youtu.be/abc')).resolves.toBeUndefined();
+    });
+
+    it('propagates a rejected promise when the connection invoke rejects', async () => {
+      // Arrange
+      mockConnection.invoke.mockRejectedValue(new Error('INVALID_YOUTUBE_URL'));
+
+      // Act & Assert
+      await expect(service.submitSong('bad-url')).rejects.toThrow('INVALID_YOUTUBE_URL');
+    });
+  });
+
+  describe('onPhaseChanged()', () => {
+    it('registers a handler on the connection using the PhaseChanged event name', () => {
+      // Arrange
+      const handler = vi.fn();
+
+      // Act
+      service.onPhaseChanged(handler);
+
+      // Assert
+      expect(mockConnection.on).toHaveBeenCalledOnce();
+      expect(mockConnection.on).toHaveBeenCalledWith('PhaseChanged', handler);
+    });
+
+    it('invokes the handler with the payload when the mock fires a PhaseChanged event', () => {
+      // Arrange
+      const handler = vi.fn();
+      service.onPhaseChanged(handler);
+
+      const registeredHandler = mockConnection.on.mock.calls.find(
+        (call: unknown[]) => call[0] === 'PhaseChanged',
+      )?.[1] as ((payload: unknown) => void) | undefined;
+
+      const payload = { newPhase: 'Submission' };
+
+      // Act
+      registeredHandler?.(payload);
+
+      // Assert
+      expect(handler).toHaveBeenCalledOnce();
+      expect(handler).toHaveBeenCalledWith(payload);
+    });
+  });
+
+  describe('onSongSubmitted()', () => {
+    it('registers a handler on the connection using the SongSubmitted event name', () => {
+      // Arrange
+      const handler = vi.fn();
+
+      // Act
+      service.onSongSubmitted(handler);
+
+      // Assert
+      expect(mockConnection.on).toHaveBeenCalledOnce();
+      expect(mockConnection.on).toHaveBeenCalledWith('SongSubmitted', handler);
+    });
+
+    it('invokes the handler with the payload when the mock fires a SongSubmitted event', () => {
+      // Arrange
+      const handler = vi.fn();
+      service.onSongSubmitted(handler);
+
+      const registeredHandler = mockConnection.on.mock.calls.find(
+        (call: unknown[]) => call[0] === 'SongSubmitted',
+      )?.[1] as ((payload: unknown) => void) | undefined;
+
+      const payload = { playerId: 'conn-1' };
+
+      // Act
+      registeredHandler?.(payload);
+
+      // Assert
+      expect(handler).toHaveBeenCalledOnce();
+      expect(handler).toHaveBeenCalledWith(payload);
+    });
+  });
+
+  describe('onAllSubmissionsReceived()', () => {
+    it('registers a handler on the connection using the AllSubmissionsReceived event name', () => {
+      // Arrange
+      const handler = vi.fn();
+
+      // Act
+      service.onAllSubmissionsReceived(handler);
+
+      // Assert
+      expect(mockConnection.on).toHaveBeenCalledOnce();
+      expect(mockConnection.on).toHaveBeenCalledWith('AllSubmissionsReceived', handler);
+    });
+
+    it('invokes the handler when the mock fires an AllSubmissionsReceived event', () => {
+      // Arrange
+      const handler = vi.fn();
+      service.onAllSubmissionsReceived(handler);
+
+      const registeredHandler = mockConnection.on.mock.calls.find(
+        (call: unknown[]) => call[0] === 'AllSubmissionsReceived',
+      )?.[1] as (() => void) | undefined;
+
+      // Act
+      registeredHandler?.();
+
+      // Assert
+      expect(handler).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('offEvent()', () => {
+    it('calls off on the underlying connection with the event name and handler', () => {
+      // Arrange
+      const handler = vi.fn();
+
+      // Act
+      service.offEvent('SongSubmitted', handler);
+
+      // Assert
+      expect(mockConnection.off).toHaveBeenCalledOnce();
+      expect(mockConnection.off).toHaveBeenCalledWith('SongSubmitted', handler);
     });
   });
 });

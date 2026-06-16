@@ -77,5 +77,40 @@ public static class JamExtensions
             jam.InternalPlayers[_random.Next(jam.InternalPlayers.Count)].PromoteToHost();
         }
     }
+
+    /// <summary>
+    /// Advances the Jam from the <see cref="JamPhase.Lobby"/> phase to the
+    /// <see cref="JamPhase.Submission"/> phase.
+    /// </summary>
+    /// <param name="jam">The Jam to advance.</param>
+    /// <param name="requestingPlayerId">The ConnectionId of the Player requesting the advance.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="jam"/> or <paramref name="requestingPlayerId"/> is <c>null</c>.
+    /// </exception>
+    /// <exception cref="UnauthorizedHostActionException">
+    /// Thrown when the Player identified by <paramref name="requestingPlayerId"/> is not the Host.
+    /// </exception>
+    /// <exception cref="InvalidPhaseTransitionException">
+    /// Thrown when the Jam is not currently in the <see cref="JamPhase.Lobby"/> phase.
+    /// </exception>
+    public static void AdvancePhase(this Aggregates.Jam jam, string requestingPlayerId)
+    {
+        ArgumentNullException.ThrowIfNull(jam);
+        ArgumentNullException.ThrowIfNull(requestingPlayerId);
+
+        if (jam.Phase != JamPhase.Lobby)
+        {
+            throw new InvalidPhaseTransitionException(jam.Phase);
+        }
+
+        var requestingPlayer = jam.Players.FirstOrDefault(p => p.PlayerId == requestingPlayerId);
+
+        if (requestingPlayer is null || !requestingPlayer.IsHost)
+        {
+            throw new UnauthorizedHostActionException(requestingPlayerId);
+        }
+
+        jam.Phase = JamPhase.Submission;
+    }
 }
 

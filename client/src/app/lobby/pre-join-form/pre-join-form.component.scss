@@ -1,0 +1,28 @@
+// Styles for the pre-join entry form.
+// Colors, typography, and base component styles come from styles.scss.
+
+// Pass layout through to the parent flex container.
+:host {
+  display: contents;
+}
+
+// ── Pre-join phase ────────────────────────────────────────────
+
+.lobby-container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  max-width: 560px;
+  gap: var(--space-6);
+}
+
+.step--action,
+.step--join {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+  animation: fade-in var(--duration-fast) var(--ease-standard) both;
+}
+

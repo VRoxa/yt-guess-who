@@ -1,0 +1,74 @@
+// Styles for the in-jam Lobby waiting room.
+// Colors, typography, and base component styles come from styles.scss.
+
+// Pass layout through to the parent flex container.
+:host {
+  display: contents;
+}
+
+// ── In-jam Lobby phase ────────────────────────────────────────
+
+.jam-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  max-width: 560px;
+}
+
+// ── Waiting section ───────────────────────────────────────────
+
+.waiting-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.waiting-text {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--md-on-surface-variant);
+  text-align: center;
+}
+
+// ── Start section ─────────────────────────────────────────────
+
+.start-section {
+  display: flex;
+  justify-content: center;
+}
+
+// ── Leave section ─────────────────────────────────────────────
+
+.leave-section {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-4);
+}
+
+// ── Waiting dots animation ─────────────────────────────────────
+// Intentional exception to the no-looping-animation rule — see docs/design/components/lobby.md §3.
+
+.waiting-dots {
+  display: inline-flex;
+}
+
+@keyframes dot-pulse {
+  0%, 80%, 100% { opacity: 0.2; }
+  40%            { opacity: 1; }
+}
+
+.dot {
+  display: inline-block;
+  animation: dot-pulse 1.2s ease-in-out infinite;
+
+  &:nth-child(2) { animation-delay: 0.2s; }
+  &:nth-child(3) { animation-delay: 0.4s; }
+}
+

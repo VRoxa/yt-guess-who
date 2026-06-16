@@ -16,26 +16,29 @@ function createMockHubService(
   createJamImpl?: () => Promise<string>,
   joinJamImpl?: () => Promise<void>,
   leaveJamImpl?: () => Promise<void>,
+  advancePhaseImpl?: () => Promise<void>,
+  submitSongImpl?: () => Promise<void>,
 ) {
   let _playerJoinedHandler: ((player: Player) => void) | undefined;
   let _playerLeftHandler: ((payload: { playerId: string }) => void) | undefined;
   let _hostChangedHandler: ((payload: HostChangedEvent) => void) | undefined;
+  let _phaseChangedHandler: ((payload: { newPhase: string }) => void) | undefined;
+  let _songSubmittedHandler: ((payload: { playerId: string }) => void) | undefined;
+  let _allSubmissionsReceivedHandler: (() => void) | undefined;
 
-  const onPlayerJoined = vi.fn((handler: (player: Player) => void) => {
-    _playerJoinedHandler = handler;
-  });
-
-  const onPlayerLeft = vi.fn((handler: (payload: { playerId: string }) => void) => {
-    _playerLeftHandler = handler;
-  });
-
-  const onHostChanged = vi.fn((handler: (payload: HostChangedEvent) => void) => {
-    _hostChangedHandler = handler;
-  });
+  const onPlayerJoined = vi.fn((handler: (player: Player) => void) => { _playerJoinedHandler = handler; });
+  const onPlayerLeft = vi.fn((handler: (payload: { playerId: string }) => void) => { _playerLeftHandler = handler; });
+  const onHostChanged = vi.fn((handler: (payload: HostChangedEvent) => void) => { _hostChangedHandler = handler; });
+  const onPhaseChanged = vi.fn((handler: (payload: { newPhase: string }) => void) => { _phaseChangedHandler = handler; });
+  const onSongSubmitted = vi.fn((handler: (payload: { playerId: string }) => void) => { _songSubmittedHandler = handler; });
+  const onAllSubmissionsReceived = vi.fn((handler: () => void) => { _allSubmissionsReceivedHandler = handler; });
 
   const triggerPlayerJoined = (player: Player): void => { _playerJoinedHandler?.(player); };
   const triggerPlayerLeft = (payload: { playerId: string }): void => { _playerLeftHandler?.(payload); };
   const triggerHostChanged = (payload: HostChangedEvent): void => { _hostChangedHandler?.(payload); };
+  const triggerPhaseChanged = (payload: { newPhase: string }): void => { _phaseChangedHandler?.(payload); };
+  const triggerSongSubmitted = (payload: { playerId: string }): void => { _songSubmittedHandler?.(payload); };
+  const triggerAllSubmissionsReceived = (): void => { _allSubmissionsReceivedHandler?.(); };
 
   return {
     isConnected: signal(isConnected),
@@ -45,12 +48,21 @@ function createMockHubService(
     createJam: vi.fn(createJamImpl ?? (() => Promise.resolve('ABCDEF'))),
     joinJam: vi.fn(joinJamImpl ?? (() => Promise.resolve())),
     leaveJam: vi.fn(leaveJamImpl ?? (() => Promise.resolve())),
+    advancePhase: vi.fn(advancePhaseImpl ?? (() => Promise.resolve())),
+    submitSong: vi.fn(submitSongImpl ?? (() => Promise.resolve())),
+    getConnectionId: vi.fn(() => 'conn-host'),
     onPlayerJoined,
     onPlayerLeft,
     onHostChanged,
+    onPhaseChanged,
+    onSongSubmitted,
+    onAllSubmissionsReceived,
     triggerPlayerJoined,
     triggerPlayerLeft,
     triggerHostChanged,
+    triggerPhaseChanged,
+    triggerSongSubmitted,
+    triggerAllSubmissionsReceived,
   };
 }
 
@@ -219,9 +231,15 @@ describe('LobbyComponent', () => {
       createJam: vi.fn().mockResolvedValue('ABCDEF'),
       joinJam: vi.fn().mockResolvedValue(undefined),
       leaveJam: vi.fn().mockResolvedValue(undefined),
+      advancePhase: vi.fn().mockResolvedValue(undefined),
+      submitSong: vi.fn().mockResolvedValue(undefined),
+      getConnectionId: vi.fn(() => 'conn-host'),
       onPlayerJoined: vi.fn(),
       onPlayerLeft: vi.fn(),
       onHostChanged: vi.fn(),
+      onPhaseChanged: vi.fn(),
+      onSongSubmitted: vi.fn(),
+      onAllSubmissionsReceived: vi.fn(),
     };
     await render(LobbyComponent, {
       providers: [{ provide: HubConnectionService, useValue: mockService }],
@@ -251,9 +269,15 @@ describe('LobbyComponent', () => {
       createJam: vi.fn(),
       joinJam: vi.fn(),
       leaveJam: vi.fn(),
+      advancePhase: vi.fn(),
+      submitSong: vi.fn(),
+      getConnectionId: vi.fn(() => null),
       onPlayerJoined: vi.fn(),
       onPlayerLeft: vi.fn(),
       onHostChanged: vi.fn(),
+      onPhaseChanged: vi.fn(),
+      onSongSubmitted: vi.fn(),
+      onAllSubmissionsReceived: vi.fn(),
     };
     await render(LobbyComponent, {
       providers: [{ provide: HubConnectionService, useValue: mockService }],
@@ -566,6 +590,35 @@ describe('LobbyComponent', () => {
 
   // ── Player list ────────────────────────────────────────────
 
+  it('retains players received via PlayerJoined snapshot before the hub method resolves', async () => {
+    // Arrange — simulate the real SignalR ordering: server pushes PlayerJoined snapshot
+    // events to the caller *during* hub method execution, before the return value arrives.
+    // onJoined() must NOT wipe those players when the hub method resolves.
+    let resolveCreate!: (code: string) => void;
+    const pendingPromise = new Promise<string>(resolve => { resolveCreate = resolve; });
+    const mockService = createMockHubService(true, () => pendingPromise);
+    const user = userEvent.setup();
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+
+    // Act — start create but do not await; fire the server snapshot before it resolves
+    const clickPromise = user.click(screen.getByRole('button', { name: /create a jam/i }));
+    mockService.triggerPlayerJoined({ playerId: 'conn-host', displayName: 'Alice', isHost: true });
+    mockService.triggerPlayerJoined({ playerId: 'conn-bob', displayName: 'Bob', isHost: false });
+
+    // Now resolve the hub method — onJoined() must preserve the two players above
+    resolveCreate('ABCDEF');
+    await clickPromise;
+
+    // Assert — both snapshot players are visible in the lobby
+    const items = await screen.findAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    expect(items[0].textContent).toContain('Alice');
+    expect(items[1].textContent).toContain('Bob');
+  });
+
   it('appends a player to the list when a PlayerJoined event arrives', async () => {
     // Arrange
     const user = userEvent.setup();
@@ -826,6 +879,343 @@ describe('LobbyComponent', () => {
     expect(hostBadges).toHaveLength(1);
     const bobItem = screen.getByText('Bob').closest('li');
     expect(bobItem?.textContent).toContain('Host');
+  });
+
+  // ── Submission phase — Start Submissions button ───────────
+
+  it('shows the Start Submissions button in the Lobby phase when isHost is true', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(true);
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+
+    // Act — createJam sets isHost = true
+    await user.click(screen.getByRole('button', { name: /create a jam/i }));
+
+    // Assert
+    expect(screen.getByRole('button', { name: /start submissions/i })).toBeTruthy();
+  });
+
+  it('does not show the Start Submissions button when isHost is false', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(true);
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await typeNameAndOpenJoinStep(user, 'Bob');
+    await user.type(screen.getByLabelText(/jam code/i), 'ABCDEF');
+
+    // Act — joinJam sets isHost = false
+    await user.click(screen.getByRole('button', { name: /^join$/i }));
+
+    // Assert
+    expect(screen.queryByRole('button', { name: /start submissions/i })).toBeNull();
+  });
+
+  it('calls advancePhase on the hub service when Start Submissions is clicked', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(true);
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+    await user.click(screen.getByRole('button', { name: /create a jam/i }));
+
+    // Act
+    await user.click(screen.getByRole('button', { name: /start submissions/i }));
+
+    // Assert
+    expect(mockService.advancePhase).toHaveBeenCalledOnce();
+  });
+
+  it('disables the Start Submissions button while the request is in-flight', async () => {
+    // Arrange
+    let resolveAdvance!: () => void;
+    const pendingPromise = new Promise<void>(resolve => { resolveAdvance = resolve; });
+    const mockService = createMockHubService(true, undefined, undefined, undefined, () => pendingPromise);
+    const user = userEvent.setup();
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+    await user.click(screen.getByRole('button', { name: /create a jam/i }));
+
+    // Act — do not await
+    const clickPromise = user.click(screen.getByRole('button', { name: /start submissions/i }));
+
+    // Assert — button is disabled and label changes while in-flight
+    const button = screen.getByRole('button', { name: /starting…/i }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+
+    // Cleanup
+    resolveAdvance();
+    await clickPromise;
+  });
+
+  it('shows an error message when advancePhase rejects', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(
+      true,
+      undefined,
+      undefined,
+      undefined,
+      () => Promise.reject(new Error('UNAUTHORIZED')),
+    );
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+    await user.click(screen.getByRole('button', { name: /create a jam/i }));
+
+    // Act
+    await user.click(screen.getByRole('button', { name: /start submissions/i }));
+
+    // Assert
+    expect(screen.getByText('UNAUTHORIZED')).toBeTruthy();
+  });
+
+  it('does not show the Start Submissions button after PhaseChanged transitions to Submission', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(true);
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+    await user.click(screen.getByRole('button', { name: /create a jam/i }));
+
+    // Act
+    mockService.triggerPhaseChanged({ newPhase: 'Submission' });
+
+    // Assert
+    expect(await screen.findByLabelText(/your youtube url/i)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /start submissions/i })).toBeNull();
+  });
+
+  // ── Submission phase — URL input and Submit button ─────────
+
+  it('shows the YouTube URL input and Submit button in the Submission phase', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(true);
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+    await user.click(screen.getByRole('button', { name: /create a jam/i }));
+
+    // Act
+    mockService.triggerPhaseChanged({ newPhase: 'Submission' });
+
+    // Assert
+    expect(await screen.findByLabelText(/your youtube url/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^submit$/i })).toBeTruthy();
+  });
+
+  it('disables the Submit button when the URL input is empty', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(true);
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+    await user.click(screen.getByRole('button', { name: /create a jam/i }));
+    mockService.triggerPhaseChanged({ newPhase: 'Submission' });
+    await screen.findByLabelText(/your youtube url/i);
+
+    // Assert — input is empty, button disabled
+    const button = screen.getByRole('button', { name: /^submit$/i }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+  });
+
+  it('enables the Submit button when a URL is entered', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(true);
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+    await user.click(screen.getByRole('button', { name: /create a jam/i }));
+    mockService.triggerPhaseChanged({ newPhase: 'Submission' });
+    await screen.findByLabelText(/your youtube url/i);
+
+    // Act
+    await user.type(screen.getByLabelText(/your youtube url/i), 'https://www.youtube.com/watch?v=abc');
+
+    // Assert
+    const button = screen.getByRole('button', { name: /^submit$/i }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+  });
+
+  it('calls submitSong with the trimmed URL when Submit is clicked', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(true);
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+    await user.click(screen.getByRole('button', { name: /create a jam/i }));
+    mockService.triggerPhaseChanged({ newPhase: 'Submission' });
+    await screen.findByLabelText(/your youtube url/i);
+    await user.type(screen.getByLabelText(/your youtube url/i), '  https://youtu.be/abc  ');
+
+    // Act
+    await user.click(screen.getByRole('button', { name: /^submit$/i }));
+
+    // Assert
+    expect(mockService.submitSong).toHaveBeenCalledOnce();
+    expect(mockService.submitSong).toHaveBeenCalledWith('https://youtu.be/abc');
+  });
+
+  it('disables the Submit button while the request is in-flight', async () => {
+    // Arrange
+    let resolveSubmit!: () => void;
+    const pendingPromise = new Promise<void>(resolve => { resolveSubmit = resolve; });
+    const mockService = createMockHubService(true, undefined, undefined, undefined, undefined, () => pendingPromise);
+    const user = userEvent.setup();
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+    await user.click(screen.getByRole('button', { name: /create a jam/i }));
+    mockService.triggerPhaseChanged({ newPhase: 'Submission' });
+    await screen.findByLabelText(/your youtube url/i);
+    await user.type(screen.getByLabelText(/your youtube url/i), 'https://youtu.be/abc');
+
+    // Act — start click but do not await
+    const clickPromise = user.click(screen.getByRole('button', { name: /^submit$/i }));
+
+    // Assert — button is disabled and label changes while in-flight
+    const button = screen.getByRole('button', { name: /submitting…/i }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+
+    // Cleanup
+    resolveSubmit();
+    await clickPromise;
+  });
+
+  it('shows an error message when submitSong rejects', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(
+      true,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      () => Promise.reject(new Error('INVALID_YOUTUBE_URL')),
+    );
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+    await user.click(screen.getByRole('button', { name: /create a jam/i }));
+    mockService.triggerPhaseChanged({ newPhase: 'Submission' });
+    await screen.findByLabelText(/your youtube url/i);
+    await user.type(screen.getByLabelText(/your youtube url/i), 'https://www.google.com');
+
+    // Act
+    await user.click(screen.getByRole('button', { name: /^submit$/i }));
+
+    // Assert
+    expect(screen.getByText('INVALID_YOUTUBE_URL')).toBeTruthy();
+  });
+
+  // ── Submission phase — SongSubmitted event ─────────────────
+
+  it('adds a playerId to the submitted set when a SongSubmitted event arrives', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(true);
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+    await user.click(screen.getByRole('button', { name: /create a jam/i }));
+    mockService.triggerPhaseChanged({ newPhase: 'Submission' });
+    mockService.triggerPlayerJoined({ playerId: 'conn-host', displayName: 'Alice', isHost: true });
+    mockService.triggerPlayerJoined({ playerId: 'conn-bob', displayName: 'Bob', isHost: false });
+    await screen.findByText('Alice');
+
+    // Act
+    mockService.triggerSongSubmitted({ playerId: 'conn-bob' });
+
+    // Assert — Bob's row shows the submitted indicator
+    const bobItem = await screen.findByText('Bob');
+    expect(bobItem.closest('li')?.textContent).toContain('✓');
+  });
+
+  it('disables the Submit button after the current player has submitted', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    // getConnectionId returns 'conn-host' by default in createMockHubService
+    const mockService = createMockHubService(true);
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+    await user.click(screen.getByRole('button', { name: /create a jam/i }));
+    mockService.triggerPhaseChanged({ newPhase: 'Submission' });
+    await screen.findByLabelText(/your youtube url/i);
+    await user.type(screen.getByLabelText(/your youtube url/i), 'https://youtu.be/abc');
+
+    // Act — server confirms Alice's submission
+    mockService.triggerSongSubmitted({ playerId: 'conn-host' });
+
+    // Assert — the form is replaced by the confirmation message
+    expect(await screen.findByText(/you have submitted your song/i)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^submit$/i })).toBeNull();
+  });
+
+  // ── Submission phase — AllSubmissionsReceived event ────────
+
+  it('shows the all-submitted message when AllSubmissionsReceived is triggered', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(true);
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+    await user.click(screen.getByRole('button', { name: /create a jam/i }));
+    mockService.triggerPhaseChanged({ newPhase: 'Submission' });
+    await screen.findByLabelText(/your youtube url/i);
+
+    // Act
+    mockService.triggerAllSubmissionsReceived();
+
+    // Assert
+    expect(await screen.findByText(/all songs are in/i)).toBeTruthy();
+  });
+
+  it('hides the URL input and Submit button after AllSubmissionsReceived', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const mockService = createMockHubService(true);
+    await render(LobbyComponent, {
+      providers: [{ provide: HubConnectionService, useValue: mockService }],
+    });
+    await user.type(screen.getByLabelText(/your name/i), 'Alice');
+    await user.click(screen.getByRole('button', { name: /create a jam/i }));
+    mockService.triggerPhaseChanged({ newPhase: 'Submission' });
+    await screen.findByLabelText(/your youtube url/i);
+
+    // Act
+    mockService.triggerAllSubmissionsReceived();
+
+    // Assert
+    await screen.findByText(/all songs are in/i);
+    expect(screen.queryByLabelText(/your youtube url/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: /^submit$/i })).toBeNull();
   });
 });
 

@@ -195,5 +195,96 @@ export class HubConnectionService {
   onHostChanged(handler: (payload: HostChangedEvent) => void): void {
     this.#connection.on('HostChanged', handler);
   }
+
+  /**
+   * Returns the SignalR ConnectionId of the current connection, or `null` if not yet connected.
+   *
+   * @remarks
+   * The ConnectionId matches the `Context.ConnectionId` used as `PlayerId` on the server.
+   * This value is only available after the connection has been successfully started.
+   */
+  getConnectionId(): string | null {
+    return this.#connection.connectionId;
+  }
+
+  /**
+   * Invokes the `AdvancePhase` hub method, advancing the Jam to the next phase.
+   *
+   * @remarks
+   * Thin delegation to the underlying {@link HubConnection}. Only the Host may call this.
+   * State management (currentPhase) is the responsibility of the calling component via
+   * the `onPhaseChanged` event handler.
+   *
+   * @returns A promise that resolves when the server confirms the advance, or rejects
+   * with the error code string when the server sends a {@link HubException}.
+   */
+  advancePhase(): Promise<void> {
+    return this.#connection.invoke<void>('AdvancePhase');
+  }
+
+  /**
+   * Invokes the `SubmitSong` hub method with the Player's YouTube URL.
+   *
+   * @remarks
+   * Thin delegation to the underlying {@link HubConnection}. State management
+   * (isSubmitting, submitted state) is the responsibility of the calling component.
+   *
+   * @param youtubeUrl - The raw YouTube URL string to submit.
+   * @returns A promise that resolves when the server confirms the submission, or rejects
+   * with the error code string when the server sends a {@link HubException}.
+   */
+  submitSong(youtubeUrl: string): Promise<void> {
+    return this.#connection.invoke<void>('SubmitSong', youtubeUrl);
+  }
+
+  /**
+   * Registers a handler invoked each time the server sends a `PhaseChanged` event.
+   *
+   * @param handler - Callback receiving the payload containing the new phase string.
+   */
+  onPhaseChanged(handler: (payload: { newPhase: string }) => void): void {
+    this.#connection.on('PhaseChanged', handler);
+  }
+
+  /**
+   * Registers a handler invoked each time the server sends a `SongSubmitted` event.
+   *
+   * @remarks
+   * The payload carries only the `playerId` — the URL is never revealed to peers.
+   *
+   * @param handler - Callback receiving the payload containing the `playerId` that submitted.
+   */
+  onSongSubmitted(handler: (payload: { playerId: string }) => void): void {
+    this.#connection.on('SongSubmitted', handler);
+  }
+
+  /**
+   * Registers a handler invoked when the server broadcasts `AllSubmissionsReceived`.
+   *
+   * @remarks
+   * This event carries no payload — the event itself is the signal that every Player
+   * in the Jam has submitted their song URL.
+   *
+   * @param handler - Zero-argument callback invoked when all submissions are in.
+   */
+  onAllSubmissionsReceived(handler: () => void): void {
+    this.#connection.on('AllSubmissionsReceived', handler);
+  }
+
+  /**
+   * Unregisters a previously registered event handler by event name and reference.
+   *
+   * @remarks
+   * Must be called in `DestroyRef.onDestroy` for any handler registered by a component
+   * that can be created and destroyed multiple times, to prevent handler pile-up on
+   * the shared long-lived {@link HubConnection}.
+   *
+   * @param eventName - The SignalR event name passed to {@link HubConnection.on}.
+   * @param handler - The exact function reference that was registered.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  offEvent(eventName: string, handler: (...args: any[]) => void): void {
+    this.#connection.off(eventName, handler);
+  }
 }
 

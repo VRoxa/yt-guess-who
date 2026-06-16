@@ -4,6 +4,8 @@ using YtGuessWho.Application.DTOs;
 using YtGuessWho.Application.Exceptions;
 using YtGuessWho.Application.Repositories;
 using YtGuessWho.Domain.Aggregates;
+using YtGuessWho.Domain.Enums;
+using YtGuessWho.Domain.Exceptions;
 using YtGuessWho.Domain.Extensions;
 
 namespace YtGuessWho.Application.Services.Implementations;
@@ -144,6 +146,68 @@ internal sealed class JamService : IJamService
             promotedHostId ?? "(no change)");
 
         return Task.FromResult(new LeaveJamResult(jam.JamCode.Value, false, promotedHostId));
+    }
+
+    /// <inheritdoc />
+    public Task<AdvancePhaseResult> AdvancePhase(AdvancePhaseCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var jam = _repository.FindByPlayerId(command.ConnectionId);
+
+        if (jam is null)
+        {
+            throw new NotInJamException(command.ConnectionId);
+        }
+
+        // UnauthorizedHostActionException and InvalidPhaseTransitionException propagate naturally.
+        jam.AdvancePhase(command.ConnectionId);
+
+        _logger.LogInformation(
+            "Phase advanced. JamCode: {JamCode}, NewPhase: {NewPhase}, ConnectionId: {ConnectionId}",
+            jam.JamCode.Value,
+            jam.Phase,
+            command.ConnectionId);
+
+        return Task.FromResult(new AdvancePhaseResult(jam.JamCode.Value, jam.Phase.ToString()));
+    }
+
+    /// <inheritdoc />
+    public Task<SubmitSongResult> SubmitSong(SubmitSongCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var jam = _repository.FindByPlayerId(command.ConnectionId);
+
+        if (jam is null)
+        {
+            throw new NotInJamException(command.ConnectionId);
+        }
+
+        if (jam.Phase != JamPhase.Submission)
+        {
+            throw new InvalidPhaseTransitionException(jam.Phase);
+        }
+
+        var player = jam.Players.FirstOrDefault(p => p.PlayerId == command.ConnectionId);
+
+        if (player is null)
+        {
+            throw new NotInJamException(command.ConnectionId);
+        }
+
+        // AlreadySubmittedException and InvalidYoutubeUrlException propagate naturally.
+        player.SubmitSong(command.YoutubeUrl);
+
+        var allSubmissionsReceived = jam.Players.All(p => p.Submission is not null);
+
+        _logger.LogInformation(
+            "Song submitted. JamCode: {JamCode}, ConnectionId: {ConnectionId}, AllSubmissionsReceived: {AllSubmissionsReceived}",
+            jam.JamCode.Value,
+            command.ConnectionId,
+            allSubmissionsReceived);
+
+        return Task.FromResult(new SubmitSongResult(jam.JamCode.Value, allSubmissionsReceived));
     }
 }
 

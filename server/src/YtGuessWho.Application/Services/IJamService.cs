@@ -67,5 +67,51 @@ public interface IJamService
     /// is not currently associated with any active Jam.
     /// </exception>
     Task<LeaveJamResult> LeaveJam(LeaveJamCommand command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Advances the Jam from the Lobby phase to the Submission phase.
+    /// Only the Host may invoke this operation.
+    /// </summary>
+    /// <param name="command">The command carrying the caller's ConnectionId.</param>
+    /// <param name="cancellationToken">Token to observe for cancellation requests.</param>
+    /// <returns>
+    /// An <see cref="AdvancePhaseResult"/> containing the Jam code and the name of the new phase,
+    /// so the Hub can broadcast the phase change and identify the SignalR group.
+    /// </returns>
+    /// <exception cref="Exceptions.NotInJamException">
+    /// Thrown when the player identified by <see cref="AdvancePhaseCommand.ConnectionId"/>
+    /// is not currently associated with any active Jam.
+    /// </exception>
+    /// <exception cref="YtGuessWho.Domain.Exceptions.UnauthorizedHostActionException">
+    /// Thrown when the caller is not the Host of the Jam.
+    /// </exception>
+    /// <exception cref="YtGuessWho.Domain.Exceptions.InvalidPhaseTransitionException">
+    /// Thrown when the Jam is not in the Lobby phase.
+    /// </exception>
+    Task<AdvancePhaseResult> AdvancePhase(AdvancePhaseCommand command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records a Player's YouTube URL Submission for the current Jam.
+    /// </summary>
+    /// <param name="command">The command carrying the caller's ConnectionId and raw YouTube URL.</param>
+    /// <param name="cancellationToken">Token to observe for cancellation requests.</param>
+    /// <returns>
+    /// A <see cref="SubmitSongResult"/> carrying the Jam code and whether all Players
+    /// have now submitted, enabling the Hub to broadcast <c>AllSubmissionsReceived</c> if so.
+    /// </returns>
+    /// <exception cref="Exceptions.NotInJamException">
+    /// Thrown when the player identified by <see cref="SubmitSongCommand.ConnectionId"/>
+    /// is not currently associated with any active Jam.
+    /// </exception>
+    /// <exception cref="YtGuessWho.Domain.Exceptions.InvalidPhaseTransitionException">
+    /// Thrown when the Jam is not in the Submission phase.
+    /// </exception>
+    /// <exception cref="YtGuessWho.Domain.Exceptions.AlreadySubmittedException">
+    /// Thrown when the Player has already submitted a song in this Jam.
+    /// </exception>
+    /// <exception cref="YtGuessWho.Domain.Exceptions.InvalidYoutubeUrlException">
+    /// Thrown when the provided URL does not match an accepted YouTube URL format.
+    /// </exception>
+    Task<SubmitSongResult> SubmitSong(SubmitSongCommand command, CancellationToken cancellationToken = default);
 }
 

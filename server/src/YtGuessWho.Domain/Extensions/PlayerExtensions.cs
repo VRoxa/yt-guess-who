@@ -1,3 +1,6 @@
+using YtGuessWho.Domain.Exceptions;
+using YtGuessWho.Domain.ValueObjects;
+
 namespace YtGuessWho.Domain.Extensions;
 
 /// <summary>
@@ -22,6 +25,35 @@ public static class PlayerExtensions
         ArgumentNullException.ThrowIfNull(player);
 
         player.IsHost = true;
+    }
+
+    /// <summary>
+    /// Records the Player's Submission by setting their <see cref="Entities.Player.Submission"/>
+    /// to a validated <see cref="YoutubeUrl"/>.
+    /// </summary>
+    /// <param name="player">The Player submitting a song.</param>
+    /// <param name="youtubeUrl">The raw YouTube URL string to validate and record.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="player"/> or <paramref name="youtubeUrl"/> is <c>null</c>.
+    /// </exception>
+    /// <exception cref="AlreadySubmittedException">
+    /// Thrown when the Player has already submitted a song in this Jam.
+    /// </exception>
+    /// <exception cref="InvalidYoutubeUrlException">
+    /// Thrown when <paramref name="youtubeUrl"/> does not match an accepted YouTube URL format.
+    /// </exception>
+    public static void SubmitSong(this Entities.Player player, string youtubeUrl)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(youtubeUrl);
+
+        if (player.Submission is not null)
+        {
+            throw new AlreadySubmittedException(player.PlayerId);
+        }
+
+        // InvalidYoutubeUrlException propagates naturally if the URL is invalid.
+        player.Submission = new YoutubeUrl(youtubeUrl);
     }
 }
 

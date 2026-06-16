@@ -432,5 +432,89 @@ public sealed class JamTests
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("connectionId");
     }
+
+    // ── JamExtensions.AdvancePhase ───────────────────────────────────────────
+
+    [Fact]
+    public void AdvancePhase_WhenCallerIsHostAndPhaseIsLobby_SetsPhaseToSubmission()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+
+        // Act
+        jam.AdvancePhase("host-conn");
+
+        // Assert
+        jam.Phase.Should().Be(JamPhase.Submission);
+    }
+
+    [Fact]
+    public void AdvancePhase_WhenCallerIsNotHost_ThrowsUnauthorizedHostActionException()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+        jam.AddPlayer("bob-conn", "Bob");
+
+        // Act
+        var act = () => jam.AdvancePhase("bob-conn");
+
+        // Assert
+        act.Should().Throw<UnauthorizedHostActionException>();
+    }
+
+    [Fact]
+    public void AdvancePhase_WhenCallerIsUnknown_ThrowsUnauthorizedHostActionException()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+
+        // Act
+        var act = () => jam.AdvancePhase("unknown-conn");
+
+        // Assert
+        act.Should().Throw<UnauthorizedHostActionException>();
+    }
+
+    [Fact]
+    public void AdvancePhase_WhenPhaseIsNotLobby_ThrowsInvalidPhaseTransitionException()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+        jam.Phase = JamPhase.Submission;
+
+        // Act
+        var act = () => jam.AdvancePhase("host-conn");
+
+        // Assert
+        act.Should().Throw<InvalidPhaseTransitionException>();
+    }
+
+    [Fact]
+    public void AdvancePhase_WithNullJam_ThrowsArgumentNullException()
+    {
+        // Arrange
+        Jam? jam = null;
+
+        // Act
+        var act = () => jam!.AdvancePhase("host-conn");
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("jam");
+    }
+
+    [Fact]
+    public void AdvancePhase_WithNullRequestingPlayerId_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var jam = Jam.CreateNew("host-conn", "Alice");
+
+        // Act
+        var act = () => jam.AdvancePhase(null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("requestingPlayerId");
+    }
 }
 

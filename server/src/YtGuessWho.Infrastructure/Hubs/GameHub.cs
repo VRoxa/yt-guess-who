@@ -223,10 +223,137 @@ public sealed class GameHub : Hub<IGameHubClient>
         }
     }
 
+    /// <summary>
+    /// Advances the Jam from the Lobby phase to the Submission phase.
+    /// Only the Host may invoke this method.
+    /// </summary>
+    /// <remarks>
+    /// On success: broadcasts <c>PhaseChanged</c> to the entire Jam group.
+    /// On error: sends <c>Error</c> to the caller and throws a <see cref="HubException"/>.
+    /// </remarks>
+    /// <exception cref="HubException">
+    /// Thrown for <c>NOT_IN_JAM</c>, <c>UNAUTHORIZED</c>, and <c>INVALID_PHASE</c> conditions.
+    /// </exception>
+    public async Task AdvancePhase()
+    {
+        try
+        {
+            var result = await _jamService.AdvancePhase(
+                new AdvancePhaseCommand(Context.ConnectionId),
+                Context.ConnectionAborted);
+
+            await Clients.Group(result.JamCode).PhaseChanged(new PhaseChangedPayload(result.NewPhase));
+
+            _logger.LogInformation(
+                "Phase advanced to {NewPhase} in Jam {JamCode}. ConnectionId: {ConnectionId}",
+                result.NewPhase,
+                result.JamCode,
+                Context.ConnectionId);
+        }
+        catch (NotInJamException)
+        {
+            _logger.LogWarning(
+                "NOT_IN_JAM: connection {ConnectionId} attempted AdvancePhase while not in a Jam.",
+                Context.ConnectionId);
+
+            await Clients.Caller.Error(new ErrorPayload("NOT_IN_JAM", "You are not currently in a Jam."));
+            throw new HubException("NOT_IN_JAM");
+        }
+        catch (UnauthorizedHostActionException)
+        {
+            _logger.LogWarning(
+                "UNAUTHORIZED: connection {ConnectionId} attempted AdvancePhase but is not the Host.",
+                Context.ConnectionId);
+
+            await Clients.Caller.Error(new ErrorPayload("UNAUTHORIZED", "Only the Host can advance the phase."));
+            throw new HubException("UNAUTHORIZED");
+        }
+        catch (InvalidPhaseTransitionException)
+        {
+            _logger.LogWarning(
+                "INVALID_PHASE: connection {ConnectionId} attempted AdvancePhase from an invalid phase.",
+                Context.ConnectionId);
+
+            await Clients.Caller.Error(new ErrorPayload("INVALID_PHASE", "The Jam is not in a phase that can be advanced right now."));
+            throw new HubException("INVALID_PHASE");
+        }
+    }
+
+    /// <summary>
+    /// Records the calling Player's YouTube URL Submission for the current Jam.
+    /// </summary>
+    /// <param name="youtubeUrl">The raw YouTube URL string to submit.</param>
+    /// <remarks>
+    /// On success: broadcasts <c>SongSubmitted</c> to the entire Jam group.
+    /// If this was the last outstanding Submission, also broadcasts <c>AllSubmissionsReceived</c>.
+    /// On error: sends <c>Error</c> to the caller and throws a <see cref="HubException"/>.
+    /// </remarks>
+    /// <exception cref="HubException">
+    /// Thrown for <c>NOT_IN_JAM</c>, <c>ALREADY_SUBMITTED</c>, <c>INVALID_YOUTUBE_URL</c>,
+    /// and <c>INVALID_PHASE</c> conditions.
+    /// </exception>
+    public async Task SubmitSong(string youtubeUrl)
+    {
+        try
+        {
+            var result = await _jamService.SubmitSong(
+                new SubmitSongCommand(Context.ConnectionId, youtubeUrl),
+                Context.ConnectionAborted);
+
+            await Clients.Group(result.JamCode).SongSubmitted(new SongSubmittedPayload(Context.ConnectionId));
+
+            if (result.AllSubmissionsReceived)
+            {
+                await Clients.Group(result.JamCode).AllSubmissionsReceived();
+            }
+
+            _logger.LogInformation(
+                "Song submitted in Jam {JamCode}. ConnectionId: {ConnectionId}, AllSubmissionsReceived: {AllSubmissionsReceived}",
+                result.JamCode,
+                Context.ConnectionId,
+                result.AllSubmissionsReceived);
+        }
+        catch (NotInJamException)
+        {
+            _logger.LogWarning(
+                "NOT_IN_JAM: connection {ConnectionId} attempted SubmitSong while not in a Jam.",
+                Context.ConnectionId);
+
+            await Clients.Caller.Error(new ErrorPayload("NOT_IN_JAM", "You are not currently in a Jam."));
+            throw new HubException("NOT_IN_JAM");
+        }
+        catch (AlreadySubmittedException)
+        {
+            _logger.LogWarning(
+                "ALREADY_SUBMITTED: connection {ConnectionId} attempted to submit a second song.",
+                Context.ConnectionId);
+
+            await Clients.Caller.Error(new ErrorPayload("ALREADY_SUBMITTED", "You have already submitted a song for this Jam."));
+            throw new HubException("ALREADY_SUBMITTED");
+        }
+        catch (InvalidYoutubeUrlException)
+        {
+            _logger.LogWarning(
+                "INVALID_YOUTUBE_URL: connection {ConnectionId} submitted an invalid URL.",
+                Context.ConnectionId);
+
+            await Clients.Caller.Error(new ErrorPayload("INVALID_YOUTUBE_URL", "The provided URL is not a valid YouTube URL."));
+            throw new HubException("INVALID_YOUTUBE_URL");
+        }
+        catch (InvalidPhaseTransitionException)
+        {
+            _logger.LogWarning(
+                "INVALID_PHASE: connection {ConnectionId} attempted SubmitSong outside Submission phase.",
+                Context.ConnectionId);
+
+            await Clients.Caller.Error(new ErrorPayload("INVALID_PHASE", "Song submissions are not open right now."));
+            throw new HubException("INVALID_PHASE");
+        }
+    }
+
     /// <inheritdoc />
     /// <remarks>
-    /// A raw WebSocket connection has been established. No game state is created or mutated here.
-    /// The <c>ConnectionId</c> is available but is not yet associated with any Jam.
+    /// A raw WebSocket connection has been established. No game state is created or mutated here.    /// The <c>ConnectionId</c> is available but is not yet associated with any Jam.
     /// Jam association happens when the client subsequently calls <c>CreateJam</c> or <c>JoinJam</c>.
     /// </remarks>
     public override async Task OnConnectedAsync()

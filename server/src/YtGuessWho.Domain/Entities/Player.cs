@@ -1,3 +1,5 @@
+using YtGuessWho.Domain.ValueObjects;
+
 namespace YtGuessWho.Domain.Entities;
 
 /// <summary>
@@ -31,18 +33,15 @@ public sealed class Player
     /// The cumulative Score accumulated by this Player across all completed Rounds.
     /// Starts at <c>0</c> and increases as Rounds resolve.
     /// </summary>
-    /// <summary>
-    /// The cumulative Score accumulated by this Player across all completed Rounds.
-    /// Starts at <c>0</c> and increases as Rounds resolve.
-    /// </summary>
     public int Score { get; private set; }
 
     /// <summary>
     /// The YouTube URL submitted by this Player during the Submission phase.
     /// <c>null</c> until the Player submits.
-    /// Will be replaced by a typed <c>YoutubeUrl</c> value object in a later ticket.
+    /// The setter is <c>internal</c> so <c>PlayerExtensions.SubmitSong</c> can record
+    /// the Submission without exposing mutation to outer layers.
     /// </summary>
-    public string? Submission { get; private set; }
+    public YoutubeUrl? Submission { get; internal set; }
 
     /// <summary>
     /// Initialises a new <see cref="Player"/>.
