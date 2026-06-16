@@ -111,7 +111,7 @@ public sealed class JamServiceJoinJamTests
     {
         // Arrange
         var jam = Jam.CreateNew("host-conn", "Alice");
-        jam.SetPhaseForTesting(JamPhase.Submission);
+        jam.Phase = JamPhase.Submission;
         A.CallTo(() => _repository.FindByPlayerId("joiner-conn")).Returns(null);
         A.CallTo(() => _repository.FindByCode("ABCDEF")).Returns(jam);
         var command = new JoinJamCommand("joiner-conn", "ABCDEF", "Bob");

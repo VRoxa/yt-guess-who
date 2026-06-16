@@ -18,6 +18,14 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="YtGuessWho.Tests" />
+    <!--
+      Required by FakeItEasy / Castle.DynamicProxy.
+      When a test calls A.Fake<ILogger<JamService>>(), Castle generates a proxy in the
+      dynamic assembly 'DynamicProxyGenAssembly2'. Because JamService is internal, that
+      assembly must be granted visibility or proxy generation fails at runtime with
+      "type is not accessible" — even though the test project itself can already see it.
+    -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>
 
 </Project>

@@ -39,9 +39,11 @@ public sealed class JamServiceSubmitSongTests
     [Fact]
     public async Task SubmitSong_WhenFirstPlayerSubmits_ReturnsAllSubmissionsReceivedFalse()
     {
-        // Arrange
-        var jam = CreateJamInSubmissionPhase("host-conn", "Alice");
+        // Arrange — Bob must be added while the Jam is still in Lobby (before AdvancePhase).
+        // AddPlayer enforces Phase == Lobby, so the order matters.
+        var jam = Jam.CreateNew("host-conn", "Alice");
         jam.AddPlayer("bob-conn", "Bob");
+        jam.AdvancePhase("host-conn");
         A.CallTo(() => _repository.FindByPlayerId("host-conn")).Returns(jam);
 
         // Act
@@ -69,9 +71,10 @@ public sealed class JamServiceSubmitSongTests
     [Fact]
     public async Task SubmitSong_WhenAllPlayersSubmit_ReturnsAllSubmissionsReceivedTrue()
     {
-        // Arrange
-        var jam = CreateJamInSubmissionPhase("host-conn", "Alice");
+        // Arrange — Bob must be added while the Jam is still in Lobby (before AdvancePhase).
+        var jam = Jam.CreateNew("host-conn", "Alice");
         jam.AddPlayer("bob-conn", "Bob");
+        jam.AdvancePhase("host-conn");
         // Alice submits first
         jam.Players.First(p => p.PlayerId == "host-conn").SubmitSong(ValidUrl);
         A.CallTo(() => _repository.FindByPlayerId("bob-conn")).Returns(jam);
