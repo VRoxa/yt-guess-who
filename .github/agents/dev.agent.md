@@ -37,7 +37,7 @@ If the `docs/` tree has grown since you last read it, scan it first before touch
 The PM takes the Architect's output and breaks it into **granular, numbered implementation tickets**. Every ticket is stored under:
 
 ```
-.github/skills/ticket-NNN-[kebab-title].md
+.github/features/ticket-NNN-[kebab-title].md
 ```
 
 Each ticket contains exactly:
@@ -55,7 +55,7 @@ You receive either a **ticket reference** (e.g. "implement ticket-001") or an **
 When given a ticket to implement, always do the following **before writing any code**:
 
 ### Step 1 — Read the ticket
-Open `.github/skills/[ticket-file].md`. Parse the User Story, Acceptance Criteria, and Technical Implementation Plan completely.
+Open `.github/features/[ticket-file].md`. Parse the User Story, Acceptance Criteria, and Technical Implementation Plan completely.
 
 ### Step 2 — Determine ticket status
 Inspect the actual source files listed in the Technical Implementation Plan. Classify the ticket as one of:

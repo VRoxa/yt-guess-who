@@ -40,7 +40,7 @@ The Dev reads your ticket verbatim and implements it completely, including unit 
 Before writing any ticket:
 
 1. **Read all Architect docs** listed above. Note what is already specified so you do not duplicate it.
-2. **Check `.github/skills/`** for existing tickets. The next ticket number must increment from the highest found — no gaps allowed.
+2. **Check `.github/features/`** for existing tickets. The next ticket number must increment from the highest found — no gaps allowed.
 3. **Define the scope boundary** — decide what this ticket covers and what explicitly belongs in a later ticket.
 
 ---
@@ -133,7 +133,7 @@ console, etc.]
 ## Writing Rules
 
 **Ticket numbering**
-Always inspect `.github/skills/` first. Use the next number in sequence — no gaps, no duplicates.
+Always inspect `.github/features/` first. Use the next number in sequence — no gaps, no duplicates.
 
 **Ubiquitous language**
 Use only the terms from `docs/context.md`: **Jam**, **Player**, **Host**, **Submission**, **Round**, **Guess**, **Score**, **Event**. Never invent synonyms.
@@ -151,4 +151,4 @@ A ticket should be complete and testable on its own. If a feature spans multiple
 Write test steps a person can execute with a browser, Postman, `wscat`, or the `.http` file. Each step must have a single action and a single, unambiguous expected result. Avoid vague outcomes like "it works correctly" — always describe exactly what value, status code, or event the tester should observe.
 
 **File path**
-Save the ticket to `.github/skills/ticket-NNN-[kebab-title].md`.
+Save the ticket to `.github/features/ticket-NNN-[kebab-title].md`.
